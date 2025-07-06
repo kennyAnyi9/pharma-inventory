@@ -1,7 +1,6 @@
 import { Suspense } from 'react'
 import { db } from '@/lib/db'
 import { drugs } from '@workspace/database'
-import { desc, asc } from 'drizzle-orm'
 
 interface DashboardContentProps {
   searchParams?: Promise<{ 
@@ -36,7 +35,6 @@ async function DashboardContent({ searchParams }: DashboardContentProps) {
   const drugRecords = await db.select().from(drugs)
     .limit(limit)
     .offset(offset)
-    .orderBy(asc(drugs.name))
     
   // Get total count for pagination
   const totalDrugs = await db.select().from(drugs)
