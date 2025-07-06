@@ -4,12 +4,22 @@ import * as dotenv from 'dotenv'
 import { resolve } from 'path'
 import { drugs, inventory } from '../schema'
 
-// Load environment variables
-dotenv.config({
-  path: '/home/kennedy/devmode/final-year-project/pharma-inventory/apps/web/.env.local'
-})
+// Load environment variables with flexible path strategy
+const envPaths = [
+  process.env.DB_ENV_PATH,
+  resolve(__dirname, '../../..', '.env'),
+  resolve(__dirname, '../../..', 'apps', 'web', '.env.local'),
+].filter(Boolean) as string[]
 
-const sql = neon(process.env.DATABASE_URL!)
+for (const envPath of envPaths) {
+  dotenv.config({ path: envPath })
+}
+
+if (!process.env.DATABASE_URL) {
+  throw new Error('DATABASE_URL environment variable is required for seeding')
+}
+
+const sql = neon(process.env.DATABASE_URL)
 const db = drizzle(sql)
 
 // Ghana Essential Medicines - 10 drugs
@@ -150,34 +160,45 @@ async function seed() {
   try {
     console.log('🌱 Starting seed...')
     
-    // Clear existing data
-    await db.delete(inventory)
-    await db.delete(drugs)
+    // Start transaction
+    await sql('BEGIN')
     
-    // Insert drugs
-    console.log('💊 Inserting drugs...')
-    const insertedDrugs = await db.insert(drugs).values(ghanaDrugs).returning()
-    console.log(`✅ Inserted ${insertedDrugs.length} drugs`)
-    
-    // Create initial inventory records (current stock levels)
-    console.log('📦 Creating initial inventory...')
-    const today = new Date().toISOString().split('T')[0]!
-    
-    const inventoryRecords = insertedDrugs.map(drug => ({
-      drugId: drug.id,
-      date: today,
-      openingStock: drug.reorderLevel * 2, // Start with double the reorder level
-      quantityReceived: 0,
-      quantityUsed: 0,
-      quantityExpired: 0,
-      closingStock: drug.reorderLevel * 2,
-      stockoutFlag: false,
-    }))
-    
-    await db.insert(inventory).values(inventoryRecords)
-    console.log(`✅ Created inventory records for ${inventoryRecords.length} drugs`)
-    
-    console.log('🎉 Seed completed successfully!')
+    try {
+      // Clear existing data
+      await db.delete(inventory)
+      await db.delete(drugs)
+      
+      // Insert drugs
+      console.log('💊 Inserting drugs...')
+      const insertedDrugs = await db.insert(drugs).values(ghanaDrugs).returning()
+      console.log(`✅ Inserted ${insertedDrugs.length} drugs`)
+      
+      // Create initial inventory records (current stock levels)
+      console.log('📦 Creating initial inventory...')
+      const today = new Date().toISOString().split('T')[0]!
+      
+      const inventoryRecords = insertedDrugs.map(drug => ({
+        drugId: drug.id,
+        date: today,
+        openingStock: drug.reorderLevel * 2, // Start with double the reorder level
+        quantityReceived: 0,
+        quantityUsed: 0,
+        quantityExpired: 0,
+        closingStock: drug.reorderLevel * 2,
+        stockoutFlag: false,
+      }))
+      
+      await db.insert(inventory).values(inventoryRecords)
+      console.log(`✅ Created inventory records for ${inventoryRecords.length} drugs`)
+      
+      // Commit transaction
+      await sql('COMMIT')
+      console.log('🎉 Seed completed successfully!')
+    } catch (error) {
+      // Rollback on error
+      await sql('ROLLBACK')
+      throw error
+    }
   } catch (error) {
     console.error('❌ Seed failed:', error)
     process.exit(1)
