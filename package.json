@@ -6,7 +6,12 @@
     "build": "turbo build",
     "dev": "turbo dev",
     "lint": "turbo lint",
-    "format": "prettier --write \"**/*.{ts,tsx,md}\""
+    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "type-check": "turbo type-check",
+    "clean": "turbo clean && rm -rf node_modules .turbo",
+    "db:push": "turbo db:push",
+    "db:seed": "turbo db:seed",
+    "db:studio": "pnpm --filter @workspace/database db:studio"
   },
   "devDependencies": {
     "@workspace/eslint-config": "workspace:*",
