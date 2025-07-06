@@ -4,10 +4,10 @@ import { drugs } from '@workspace/database'
 import { desc, asc } from 'drizzle-orm'
 
 interface DashboardContentProps {
-  searchParams?: { 
+  searchParams?: Promise<{ 
     page?: string;
     limit?: string;
-  }
+  }>
 }
 
 // Loading component
@@ -27,8 +27,9 @@ function DashboardSkeleton() {
 
 // Data fetching component
 async function DashboardContent({ searchParams }: DashboardContentProps) {
-  const page = parseInt(searchParams?.page || '1')
-  const limit = parseInt(searchParams?.limit || '10')
+  const resolvedSearchParams = await searchParams
+  const page = parseInt(resolvedSearchParams?.page || '1')
+  const limit = parseInt(resolvedSearchParams?.limit || '10')
   const offset = (page - 1) * limit
   
   // Fetch paginated drugs
