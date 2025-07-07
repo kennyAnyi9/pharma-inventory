@@ -63,55 +63,53 @@ export async function updateStock(data: z.infer<typeof updateStockSchema>) {
     const validated = updateStockSchema.parse(data)
     const today = new Date().toISOString().split('T')[0]!
 
-    await db.transaction(async (tx) => {
-      // Get current stock
-      const [currentInventory] = await tx
+    // Get current stock
+    const [currentInventory] = await db
+      .select()
+      .from(inventory)
+      .where(
+        and(
+          eq(inventory.drugId, validated.drugId),
+          eq(inventory.date, today)
+        )
+      )
+      .limit(1)
+
+    if (currentInventory) {
+      // Update existing record
+      await db
+        .update(inventory)
+        .set({
+          quantityReceived: currentInventory.quantityReceived + validated.quantity,
+          closingStock: currentInventory.closingStock + validated.quantity,
+          notes: validated.notes,
+          updatedAt: new Date(),
+        })
+        .where(eq(inventory.id, currentInventory.id))
+    } else {
+      // Get previous day's closing stock
+      const [previousInventory] = await db
         .select()
         .from(inventory)
-        .where(
-          and(
-            eq(inventory.drugId, validated.drugId),
-            eq(inventory.date, today)
-          )
-        )
+        .where(eq(inventory.drugId, validated.drugId))
+        .orderBy(desc(inventory.date))
         .limit(1)
 
-      if (currentInventory) {
-        // Update existing record
-        await tx
-          .update(inventory)
-          .set({
-            quantityReceived: currentInventory.quantityReceived + validated.quantity,
-            closingStock: currentInventory.closingStock + validated.quantity,
-            notes: validated.notes,
-            updatedAt: new Date(),
-          })
-          .where(eq(inventory.id, currentInventory.id))
-      } else {
-        // Get previous day's closing stock
-        const [previousInventory] = await tx
-          .select()
-          .from(inventory)
-          .where(eq(inventory.drugId, validated.drugId))
-          .orderBy(desc(inventory.date))
-          .limit(1)
+      const openingStock = previousInventory?.closingStock || 0
 
-        const openingStock = previousInventory?.closingStock || 0
-
-        // Create new record
-        await tx.insert(inventory).values({
-          drugId: validated.drugId,
-          date: today,
-          openingStock,
-          quantityReceived: validated.quantity,
-          quantityUsed: 0,
-          quantityExpired: 0,
-          closingStock: openingStock + validated.quantity,
-          stockoutFlag: false,
-          notes: validated.notes,
-        })
-      }
-    })
+      // Create new record
+      await db.insert(inventory).values({
+        drugId: validated.drugId,
+        date: today,
+        openingStock,
+        quantityReceived: validated.quantity,
+        quantityUsed: 0,
+        quantityExpired: 0,
+        closingStock: openingStock + validated.quantity,
+        stockoutFlag: false,
+        notes: validated.notes,
+      })
+    }
 
     revalidatePath('/dashboard')
     revalidatePath('/dashboard/inventory')
@@ -129,59 +127,57 @@ export async function recordUsage(data: z.infer<typeof recordUsageSchema>) {
     const validated = recordUsageSchema.parse(data)
     const today = new Date().toISOString().split('T')[0]!
 
-    await db.transaction(async (tx) => {
-      // Get current inventory
-      const [currentInventory] = await tx
-        .select()
-        .from(inventory)
-        .where(
-          and(
-            eq(inventory.drugId, validated.drugId),
-            eq(inventory.date, today)
-          )
+    // Get current inventory
+    const [currentInventory] = await db
+      .select()
+      .from(inventory)
+      .where(
+        and(
+          eq(inventory.drugId, validated.drugId),
+          eq(inventory.date, today)
         )
-        .limit(1)
+      )
+      .limit(1)
 
-      if (currentInventory) {
-        const newClosingStock = currentInventory.closingStock - validated.quantity
-        const stockoutFlag = newClosingStock <= 0
+    if (currentInventory) {
+      const newClosingStock = currentInventory.closingStock - validated.quantity
+      const stockoutFlag = newClosingStock <= 0
 
-        await tx
-          .update(inventory)
-          .set({
-            quantityUsed: currentInventory.quantityUsed + validated.quantity,
-            closingStock: Math.max(0, newClosingStock),
-            stockoutFlag,
-            notes: validated.notes,
-            updatedAt: new Date(),
-          })
-          .where(eq(inventory.id, currentInventory.id))
-      } else {
-        // Get previous day's closing stock
-        const [previousInventory] = await tx
-          .select()
-          .from(inventory)
-          .where(eq(inventory.drugId, validated.drugId))
-          .orderBy(desc(inventory.date))
-          .limit(1)
-
-        const openingStock = previousInventory?.closingStock || 0
-        const newClosingStock = openingStock - validated.quantity
-        const stockoutFlag = newClosingStock <= 0
-
-        await tx.insert(inventory).values({
-          drugId: validated.drugId,
-          date: today,
-          openingStock,
-          quantityReceived: 0,
-          quantityUsed: validated.quantity,
-          quantityExpired: 0,
+      await db
+        .update(inventory)
+        .set({
+          quantityUsed: currentInventory.quantityUsed + validated.quantity,
           closingStock: Math.max(0, newClosingStock),
           stockoutFlag,
           notes: validated.notes,
+          updatedAt: new Date(),
         })
-      }
-    })
+        .where(eq(inventory.id, currentInventory.id))
+    } else {
+      // Get previous day's closing stock
+      const [previousInventory] = await db
+        .select()
+        .from(inventory)
+        .where(eq(inventory.drugId, validated.drugId))
+        .orderBy(desc(inventory.date))
+        .limit(1)
+
+      const openingStock = previousInventory?.closingStock || 0
+      const newClosingStock = openingStock - validated.quantity
+      const stockoutFlag = newClosingStock <= 0
+
+      await db.insert(inventory).values({
+        drugId: validated.drugId,
+        date: today,
+        openingStock,
+        quantityReceived: 0,
+        quantityUsed: validated.quantity,
+        quantityExpired: 0,
+        closingStock: Math.max(0, newClosingStock),
+        stockoutFlag,
+        notes: validated.notes,
+      })
+    }
 
     revalidatePath('/dashboard')
     revalidatePath('/dashboard/inventory')
