@@ -8,10 +8,24 @@ import {
   CardTitle,
 } from "@workspace/ui/components/card";
 import { Skeleton } from "@workspace/ui/components/skeleton";
-import { Suspense } from "react";
 
 export default async function InventoryPage() {
-  const inventory = await getInventoryStatus();
+  let inventory: Awaited<ReturnType<typeof getInventoryStatus>> = [];
+  let counts: Record<string, number> = { critical: 0, low: 0, normal: 0, good: 0 };
+
+  try {
+    inventory = await getInventoryStatus();
+    
+    // Pre-compute counts for better performance
+    counts = inventory.reduce((acc, item) => {
+      acc[item.stockStatus] = (acc[item.stockStatus] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+  } catch (error) {
+    console.error('Failed to load inventory data:', error);
+    inventory = [];
+    counts = { critical: 0, low: 0, normal: 0, good: 0 };
+  }
 
   return (
     <div className="space-y-6">
@@ -41,7 +55,7 @@ export default async function InventoryPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">
-              {inventory.filter((i) => i.stockStatus === "critical").length}
+              {counts.critical || 0}
             </div>
           </CardContent>
         </Card>
@@ -51,7 +65,7 @@ export default async function InventoryPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-yellow-600">
-              {inventory.filter((i) => i.stockStatus === "low").length}
+              {counts.low || 0}
             </div>
           </CardContent>
         </Card>
@@ -61,7 +75,7 @@ export default async function InventoryPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              {inventory.filter((i) => i.stockStatus === "good").length}
+              {counts.good || 0}
             </div>
           </CardContent>
         </Card>
@@ -75,9 +89,7 @@ export default async function InventoryPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
-            <InventoryTable data={inventory} />
-          </Suspense>
+          <InventoryTable data={inventory} />
         </CardContent>
       </Card>
     </div>
