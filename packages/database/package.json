@@ -1,0 +1,28 @@
+{
+  "name": "@workspace/database",
+  "version": "0.0.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio",
+    "db:seed": "tsx src/seed/seed.ts",
+    "db:reset": "tsx src/reset.ts",
+    "db:create": "tsx src/create-tables.ts",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^0.9.0",
+    "drizzle-orm": "^0.30.0"
+  },
+  "devDependencies": {
+    "@workspace/typescript-config": "workspace:*",
+    "@types/node": "^20.0.0",
+    "drizzle-kit": "^0.21.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.4.5",
+    "dotenv": "^16.4.0"
+  }
+}
