@@ -1,6 +1,11 @@
 import { Suspense } from 'react'
+import Link from 'next/link'
 import { db } from '@/lib/db'
 import { drugs } from '@workspace/database'
+import { Card, CardContent, CardHeader, CardTitle } from '@workspace/ui/components/card'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@workspace/ui/components/table'
+import { Button } from '@workspace/ui/components/button'
+import { Skeleton } from '@workspace/ui/components/skeleton'
 
 interface DashboardContentProps {
   searchParams?: Promise<{ 
@@ -12,14 +17,23 @@ interface DashboardContentProps {
 // Loading component
 function DashboardSkeleton() {
   return (
-    <div className="animate-pulse">
-      <div className="h-8 bg-gray-200 rounded mb-6"></div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <div className="space-y-6">
+      <Skeleton className="h-8 w-48" />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="bg-gray-200 h-24 rounded-lg"></div>
+          <Card key={i}>
+            <CardContent className="p-6">
+              <Skeleton className="h-4 w-20 mb-2" />
+              <Skeleton className="h-8 w-16" />
+            </CardContent>
+          </Card>
         ))}
       </div>
-      <div className="bg-gray-200 h-64 rounded-lg"></div>
+      <Card>
+        <CardContent className="p-6">
+          <Skeleton className="h-64 w-full" />
+        </CardContent>
+      </Card>
     </div>
   )
 }
@@ -42,105 +56,96 @@ async function DashboardContent({ searchParams }: DashboardContentProps) {
   const totalPages = Math.ceil(totalCount / limit)
   
   return (
-    <div>
-      <h2 className="text-2xl font-bold mb-6">Dashboard</h2>
+    <div className="space-y-6">
+      <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+      
+      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-sm font-medium text-gray-500">Total Drugs</h3>
-          <p className="text-3xl font-bold mt-2">{totalCount}</p>
-        </div>
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-sm font-medium text-gray-500">Low Stock</h3>
-          <p className="text-3xl font-bold mt-2 text-yellow-600">0</p>
-        </div>
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-sm font-medium text-gray-500">Pending Orders</h3>
-          <p className="text-3xl font-bold mt-2">0</p>
-        </div>
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-sm font-medium text-gray-500">Active Alerts</h3>
-          <p className="text-3xl font-bold mt-2 text-red-600">0</p>
-        </div>
+        <Card>
+          <CardContent className="p-6">
+            <div className="text-sm font-medium text-muted-foreground">Total Drugs</div>
+            <div className="text-2xl font-bold">{totalCount}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-6">
+            <div className="text-sm font-medium text-muted-foreground">Low Stock</div>
+            <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">0</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-6">
+            <div className="text-sm font-medium text-muted-foreground">Pending Orders</div>
+            <div className="text-2xl font-bold">0</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-6">
+            <div className="text-sm font-medium text-muted-foreground">Active Alerts</div>
+            <div className="text-2xl font-bold text-destructive">0</div>
+          </CardContent>
+        </Card>
       </div>
       
       {/* Drug List Preview */}
-      <div className="mt-8">
-        <h3 className="text-lg font-semibold mb-4">Drugs in System</h3>
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <table className="min-w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Name
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Category
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Unit
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Reorder Level
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+      <Card>
+        <CardHeader>
+          <CardTitle>Drugs in System</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Category</TableHead>
+                <TableHead>Unit</TableHead>
+                <TableHead>Reorder Level</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {drugRecords.map((drug) => (
-                <tr key={drug.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {drug.name}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {drug.category}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {drug.unit}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {drug.reorderLevel}
-                  </td>
-                </tr>
+                <TableRow key={drug.id}>
+                  <TableCell className="font-medium">{drug.name}</TableCell>
+                  <TableCell>{drug.category}</TableCell>
+                  <TableCell>{drug.unit}</TableCell>
+                  <TableCell>{drug.reorderLevel}</TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
           
           {/* Pagination Controls */}
-          <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
-            <div className="text-sm text-gray-700">
+          <div className="flex items-center justify-between pt-4">
+            <p className="text-sm text-muted-foreground">
               Showing {offset + 1} to {Math.min(offset + limit, totalCount)} of {totalCount} results
-            </div>
-            <div className="flex space-x-2">
+            </p>
+            <div className="flex gap-2">
               {page > 1 && (
-                <a
-                  href={`/dashboard?page=${page - 1}&limit=${limit}`}
-                  className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm"
-                >
-                  Previous
-                </a>
+                <Button variant="outline" size="sm" asChild>
+                  <Link href={`/dashboard?page=${page - 1}&limit=${limit}`}>
+                    Previous
+                  </Link>
+                </Button>
               )}
               {page < totalPages && (
-                <a
-                  href={`/dashboard?page=${page + 1}&limit=${limit}`}
-                  className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm"
-                >
-                  Next
-                </a>
+                <Button variant="outline" size="sm" asChild>
+                  <Link href={`/dashboard?page=${page + 1}&limit=${limit}`}>
+                    Next
+                  </Link>
+                </Button>
               )}
             </div>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }
 
 export default async function DashboardPage({ searchParams }: DashboardContentProps) {
   return (
-    <div>
-      <h2 className="text-2xl font-bold mb-6">Dashboard</h2>
-      <Suspense fallback={<DashboardSkeleton />}>
-        <DashboardContent searchParams={searchParams} />
-      </Suspense>
-    </div>
+    <Suspense fallback={<DashboardSkeleton />}>
+      <DashboardContent searchParams={searchParams} />
+    </Suspense>
   )
 }
