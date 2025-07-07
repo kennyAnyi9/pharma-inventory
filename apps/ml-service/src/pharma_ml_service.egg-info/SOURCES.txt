@@ -1,0 +1,10 @@
+README.md
+pyproject.toml
+setup.py
+src/data/__init__.py
+src/data/generate_synthetic_data.py
+src/pharma_ml_service.egg-info/PKG-INFO
+src/pharma_ml_service.egg-info/SOURCES.txt
+src/pharma_ml_service.egg-info/dependency_links.txt
+src/pharma_ml_service.egg-info/requires.txt
+src/pharma_ml_service.egg-info/top_level.txt

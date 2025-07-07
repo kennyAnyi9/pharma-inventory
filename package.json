@@ -11,7 +11,8 @@
     "clean": "turbo clean && rm -rf node_modules .turbo",
     "db:push": "turbo db:push",
     "db:seed": "turbo db:seed",
-    "db:studio": "pnpm --filter @workspace/database db:studio"
+    "db:studio": "pnpm --filter @workspace/database db:studio",
+    "generate-data": "cd apps/ml-service && python src/data/generate_synthetic_data.py"
   },
   "devDependencies": {
     "@workspace/eslint-config": "workspace:*",

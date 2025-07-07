@@ -1,0 +1,23 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Generate Synthetic Data",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/data/generate_synthetic_data.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "python": "${workspaceFolder}/venv/bin/python"
+        },
+        {
+            "name": "Python: Test Connection",
+            "type": "python", 
+            "request": "launch",
+            "program": "${workspaceFolder}/test_connection.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "python": "${workspaceFolder}/venv/bin/python"
+        }
+    ]
+}
