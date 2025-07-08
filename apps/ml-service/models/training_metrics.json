@@ -1,0 +1,812 @@
+[
+  {
+    "drug_id": 1,
+    "drug_name": "Paracetamol 500mg",
+    "mae": 2.531984104829676,
+    "rmse": 3.247379476874068,
+    "mape": 5.019052448146838,
+    "train_samples": 132,
+    "test_samples": 34,
+    "model_path": "model_1_paracetamol_500mg.pkl",
+    "feature_importance": [
+      {
+        "feature": "is_weekend",
+        "importance": 0.283256471157074
+      },
+      {
+        "feature": "day_of_week",
+        "importance": 0.16191069781780243
+      },
+      {
+        "feature": "is_month_end",
+        "importance": 0.1589377373456955
+      },
+      {
+        "feature": "day_of_month",
+        "importance": 0.06807281821966171
+      },
+      {
+        "feature": "usage_std_14d",
+        "importance": 0.05142269283533096
+      },
+      {
+        "feature": "usage_mean_14d",
+        "importance": 0.0433439165353775
+      },
+      {
+        "feature": "week_of_month",
+        "importance": 0.03815648704767227
+      },
+      {
+        "feature": "usage_mean_7d",
+        "importance": 0.03575953468680382
+      },
+      {
+        "feature": "usage_lag_14",
+        "importance": 0.03219825401902199
+      },
+      {
+        "feature": "usage_lag_1",
+        "importance": 0.028516119346022606
+      },
+      {
+        "feature": "usage_lag_7",
+        "importance": 0.0268647912889719
+      },
+      {
+        "feature": "usage_std_7d",
+        "importance": 0.021858161315321922
+      },
+      {
+        "feature": "stock_level_ratio",
+        "importance": 0.02082205004990101
+      },
+      {
+        "feature": "usage_lag_3",
+        "importance": 0.016119223088026047
+      },
+      {
+        "feature": "is_rainy_season",
+        "importance": 0.008317641913890839
+      },
+      {
+        "feature": "month",
+        "importance": 0.004443373531103134
+      },
+      {
+        "feature": "recent_stockout",
+        "importance": 0.0
+      }
+    ],
+    "trained_at": "2025-07-08T03:32:34.765310"
+  },
+  {
+    "drug_id": 2,
+    "drug_name": "Amoxicillin 250mg",
+    "mae": 31.315104652853574,
+    "rmse": 168.43502053772912,
+    "mape": 10.932745571003966,
+    "train_samples": 133,
+    "test_samples": 34,
+    "model_path": "model_2_amoxicillin_250mg.pkl",
+    "feature_importance": [
+      {
+        "feature": "is_month_end",
+        "importance": 0.4128027558326721
+      },
+      {
+        "feature": "usage_mean_7d",
+        "importance": 0.07302463799715042
+      },
+      {
+        "feature": "is_weekend",
+        "importance": 0.06846239417791367
+      },
+      {
+        "feature": "day_of_month",
+        "importance": 0.061025481671094894
+      },
+      {
+        "feature": "usage_std_7d",
+        "importance": 0.0511806458234787
+      },
+      {
+        "feature": "stock_level_ratio",
+        "importance": 0.04644780978560448
+      },
+      {
+        "feature": "usage_std_14d",
+        "importance": 0.037270963191986084
+      },
+      {
+        "feature": "day_of_week",
+        "importance": 0.03562193736433983
+      },
+      {
+        "feature": "week_of_month",
+        "importance": 0.034409429877996445
+      },
+      {
+        "feature": "usage_lag_1",
+        "importance": 0.034381769597530365
+      },
+      {
+        "feature": "usage_mean_14d",
+        "importance": 0.03125190734863281
+      },
+      {
+        "feature": "usage_lag_14",
+        "importance": 0.03023717738687992
+      },
+      {
+        "feature": "usage_lag_7",
+        "importance": 0.02889612317085266
+      },
+      {
+        "feature": "usage_lag_3",
+        "importance": 0.025688085705041885
+      },
+      {
+        "feature": "is_rainy_season",
+        "importance": 0.014875759370625019
+      },
+      {
+        "feature": "month",
+        "importance": 0.014423152431845665
+      },
+      {
+        "feature": "recent_stockout",
+        "importance": 0.0
+      }
+    ],
+    "trained_at": "2025-07-08T03:32:40.412939"
+  },
+  {
+    "drug_id": 3,
+    "drug_name": "Metformin 500mg",
+    "mae": 1.191372647004969,
+    "rmse": 1.5516389227560252,
+    "mape": 6.052461633651706,
+    "train_samples": 132,
+    "test_samples": 34,
+    "model_path": "model_3_metformin_500mg.pkl",
+    "feature_importance": [
+      {
+        "feature": "is_month_end",
+        "importance": 0.1847706288099289
+      },
+      {
+        "feature": "is_weekend",
+        "importance": 0.14367233216762543
+      },
+      {
+        "feature": "usage_mean_7d",
+        "importance": 0.10677702724933624
+      },
+      {
+        "feature": "usage_mean_14d",
+        "importance": 0.07203113287687302
+      },
+      {
+        "feature": "usage_std_7d",
+        "importance": 0.06817681342363358
+      },
+      {
+        "feature": "usage_std_14d",
+        "importance": 0.06422564387321472
+      },
+      {
+        "feature": "stock_level_ratio",
+        "importance": 0.05556842312216759
+      },
+      {
+        "feature": "day_of_month",
+        "importance": 0.048977408558130264
+      },
+      {
+        "feature": "day_of_week",
+        "importance": 0.0485469214618206
+      },
+      {
+        "feature": "usage_lag_3",
+        "importance": 0.04348619282245636
+      },
+      {
+        "feature": "month",
+        "importance": 0.04328075051307678
+      },
+      {
+        "feature": "usage_lag_14",
+        "importance": 0.03823193162679672
+      },
+      {
+        "feature": "usage_lag_1",
+        "importance": 0.034632738679647446
+      },
+      {
+        "feature": "usage_lag_7",
+        "importance": 0.03071085922420025
+      },
+      {
+        "feature": "is_rainy_season",
+        "importance": 0.011289308778941631
+      },
+      {
+        "feature": "week_of_month",
+        "importance": 0.005621920805424452
+      },
+      {
+        "feature": "recent_stockout",
+        "importance": 0.0
+      }
+    ],
+    "trained_at": "2025-07-08T03:32:40.988452"
+  },
+  {
+    "drug_id": 4,
+    "drug_name": "Amlodipine 5mg",
+    "mae": 1.038517951965332,
+    "rmse": 1.8517713882379967,
+    "mape": 1.2137117764350192e+17,
+    "train_samples": 133,
+    "test_samples": 34,
+    "model_path": "model_4_amlodipine_5mg.pkl",
+    "feature_importance": [
+      {
+        "feature": "is_month_end",
+        "importance": 0.16903220117092133
+      },
+      {
+        "feature": "stock_level_ratio",
+        "importance": 0.14259985089302063
+      },
+      {
+        "feature": "usage_mean_7d",
+        "importance": 0.1195215955376625
+      },
+      {
+        "feature": "usage_lag_7",
+        "importance": 0.064964659512043
+      },
+      {
+        "feature": "day_of_week",
+        "importance": 0.058764807879924774
+      },
+      {
+        "feature": "day_of_month",
+        "importance": 0.057666026055812836
+      },
+      {
+        "feature": "usage_std_7d",
+        "importance": 0.0555042028427124
+      },
+      {
+        "feature": "usage_mean_14d",
+        "importance": 0.05510075017809868
+      },
+      {
+        "feature": "is_rainy_season",
+        "importance": 0.05327089503407478
+      },
+      {
+        "feature": "usage_lag_14",
+        "importance": 0.04979438707232475
+      },
+      {
+        "feature": "usage_std_14d",
+        "importance": 0.0469319224357605
+      },
+      {
+        "feature": "usage_lag_3",
+        "importance": 0.04513787478208542
+      },
+      {
+        "feature": "month",
+        "importance": 0.0264112688601017
+      },
+      {
+        "feature": "usage_lag_1",
+        "importance": 0.022223608568310738
+      },
+      {
+        "feature": "is_weekend",
+        "importance": 0.02049950696527958
+      },
+      {
+        "feature": "week_of_month",
+        "importance": 0.012576443143188953
+      },
+      {
+        "feature": "recent_stockout",
+        "importance": 0.0
+      }
+    ],
+    "trained_at": "2025-07-08T03:32:41.523156"
+  },
+  {
+    "drug_id": 5,
+    "drug_name": "Omeprazole 20mg",
+    "mae": 1.578273156109978,
+    "rmse": 1.9313912670830042,
+    "mape": 8.866081908441888,
+    "train_samples": 132,
+    "test_samples": 34,
+    "model_path": "model_5_omeprazole_20mg.pkl",
+    "feature_importance": [
+      {
+        "feature": "is_weekend",
+        "importance": 0.24402689933776855
+      },
+      {
+        "feature": "day_of_week",
+        "importance": 0.16985274851322174
+      },
+      {
+        "feature": "week_of_month",
+        "importance": 0.08673121780157089
+      },
+      {
+        "feature": "usage_std_7d",
+        "importance": 0.07517661899328232
+      },
+      {
+        "feature": "day_of_month",
+        "importance": 0.05826975032687187
+      },
+      {
+        "feature": "usage_mean_7d",
+        "importance": 0.05673104524612427
+      },
+      {
+        "feature": "usage_mean_14d",
+        "importance": 0.05480571836233139
+      },
+      {
+        "feature": "usage_std_14d",
+        "importance": 0.045063719153404236
+      },
+      {
+        "feature": "is_month_end",
+        "importance": 0.03396543115377426
+      },
+      {
+        "feature": "stock_level_ratio",
+        "importance": 0.03263024985790253
+      },
+      {
+        "feature": "usage_lag_1",
+        "importance": 0.03241603076457977
+      },
+      {
+        "feature": "usage_lag_14",
+        "importance": 0.030480558052659035
+      },
+      {
+        "feature": "usage_lag_7",
+        "importance": 0.027324160560965538
+      },
+      {
+        "feature": "usage_lag_3",
+        "importance": 0.02569539286196232
+      },
+      {
+        "feature": "month",
+        "importance": 0.02440938726067543
+      },
+      {
+        "feature": "is_rainy_season",
+        "importance": 0.002421086421236396
+      },
+      {
+        "feature": "recent_stockout",
+        "importance": 0.0
+      }
+    ],
+    "trained_at": "2025-07-08T03:32:42.072635"
+  },
+  {
+    "drug_id": 6,
+    "drug_name": "Artemether/Lumefantrine 20/120mg",
+    "mae": 28.169450198902805,
+    "rmse": 127.69699771751277,
+    "mape": 20.762696539505583,
+    "train_samples": 133,
+    "test_samples": 34,
+    "model_path": "model_6_artemether_lumefantrine_20_120mg.pkl",
+    "feature_importance": [
+      {
+        "feature": "is_rainy_season",
+        "importance": 0.5694864988327026
+      },
+      {
+        "feature": "month",
+        "importance": 0.2593127191066742
+      },
+      {
+        "feature": "is_month_end",
+        "importance": 0.05289716273546219
+      },
+      {
+        "feature": "usage_lag_1",
+        "importance": 0.016630161553621292
+      },
+      {
+        "feature": "usage_mean_7d",
+        "importance": 0.014971107244491577
+      },
+      {
+        "feature": "stock_level_ratio",
+        "importance": 0.013813620433211327
+      },
+      {
+        "feature": "day_of_month",
+        "importance": 0.01202494278550148
+      },
+      {
+        "feature": "usage_std_14d",
+        "importance": 0.011867210268974304
+      },
+      {
+        "feature": "usage_std_7d",
+        "importance": 0.010959808714687824
+      },
+      {
+        "feature": "usage_lag_7",
+        "importance": 0.00875129085034132
+      },
+      {
+        "feature": "usage_lag_3",
+        "importance": 0.008005695417523384
+      },
+      {
+        "feature": "usage_mean_14d",
+        "importance": 0.007075837347656488
+      },
+      {
+        "feature": "usage_lag_14",
+        "importance": 0.006427330896258354
+      },
+      {
+        "feature": "day_of_week",
+        "importance": 0.0037584214005619287
+      },
+      {
+        "feature": "week_of_month",
+        "importance": 0.002317150356248021
+      },
+      {
+        "feature": "is_weekend",
+        "importance": 0.001701070461422205
+      },
+      {
+        "feature": "recent_stockout",
+        "importance": 0.0
+      }
+    ],
+    "trained_at": "2025-07-08T03:32:42.803780"
+  },
+  {
+    "drug_id": 7,
+    "drug_name": "ORS Sachets",
+    "mae": 14.430718646329993,
+    "rmse": 20.294089808740683,
+    "mape": 39.90816180303418,
+    "train_samples": 132,
+    "test_samples": 34,
+    "model_path": "model_7_ors_sachets.pkl",
+    "feature_importance": [
+      {
+        "feature": "usage_std_7d",
+        "importance": 0.18528755009174347
+      },
+      {
+        "feature": "usage_lag_14",
+        "importance": 0.1475214958190918
+      },
+      {
+        "feature": "usage_std_14d",
+        "importance": 0.08124513179063797
+      },
+      {
+        "feature": "day_of_week",
+        "importance": 0.073337621986866
+      },
+      {
+        "feature": "usage_lag_1",
+        "importance": 0.06586404144763947
+      },
+      {
+        "feature": "week_of_month",
+        "importance": 0.0653020590543747
+      },
+      {
+        "feature": "is_month_end",
+        "importance": 0.06162567436695099
+      },
+      {
+        "feature": "day_of_month",
+        "importance": 0.05712277442216873
+      },
+      {
+        "feature": "usage_mean_7d",
+        "importance": 0.0474889874458313
+      },
+      {
+        "feature": "usage_lag_3",
+        "importance": 0.047385990619659424
+      },
+      {
+        "feature": "usage_mean_14d",
+        "importance": 0.045858267694711685
+      },
+      {
+        "feature": "stock_level_ratio",
+        "importance": 0.03811896964907646
+      },
+      {
+        "feature": "usage_lag_7",
+        "importance": 0.03120499476790428
+      },
+      {
+        "feature": "is_weekend",
+        "importance": 0.023495960980653763
+      },
+      {
+        "feature": "is_rainy_season",
+        "importance": 0.015164856798946857
+      },
+      {
+        "feature": "month",
+        "importance": 0.013975613750517368
+      },
+      {
+        "feature": "recent_stockout",
+        "importance": 0.0
+      }
+    ],
+    "trained_at": "2025-07-08T03:32:43.367558"
+  },
+  {
+    "drug_id": 8,
+    "drug_name": "Ferrous Sulphate 200mg",
+    "mae": 0.9770639643949621,
+    "rmse": 1.276686016897232,
+    "mape": 6.640258197004818,
+    "train_samples": 132,
+    "test_samples": 34,
+    "model_path": "model_8_ferrous_sulphate_200mg.pkl",
+    "feature_importance": [
+      {
+        "feature": "is_month_end",
+        "importance": 0.2765282988548279
+      },
+      {
+        "feature": "day_of_month",
+        "importance": 0.0897955670952797
+      },
+      {
+        "feature": "month",
+        "importance": 0.08823374658823013
+      },
+      {
+        "feature": "usage_mean_14d",
+        "importance": 0.08196697384119034
+      },
+      {
+        "feature": "week_of_month",
+        "importance": 0.07038863748311996
+      },
+      {
+        "feature": "usage_mean_7d",
+        "importance": 0.068333201110363
+      },
+      {
+        "feature": "usage_std_7d",
+        "importance": 0.053664617240428925
+      },
+      {
+        "feature": "usage_lag_14",
+        "importance": 0.04510374367237091
+      },
+      {
+        "feature": "usage_std_14d",
+        "importance": 0.041329119354486465
+      },
+      {
+        "feature": "day_of_week",
+        "importance": 0.04131609946489334
+      },
+      {
+        "feature": "stock_level_ratio",
+        "importance": 0.0375441238284111
+      },
+      {
+        "feature": "usage_lag_1",
+        "importance": 0.03656113147735596
+      },
+      {
+        "feature": "usage_lag_3",
+        "importance": 0.0272867102175951
+      },
+      {
+        "feature": "is_weekend",
+        "importance": 0.024659911170601845
+      },
+      {
+        "feature": "usage_lag_7",
+        "importance": 0.014164574444293976
+      },
+      {
+        "feature": "is_rainy_season",
+        "importance": 0.003123636357486248
+      },
+      {
+        "feature": "recent_stockout",
+        "importance": 0.0
+      }
+    ],
+    "trained_at": "2025-07-08T03:32:43.844457"
+  },
+  {
+    "drug_id": 9,
+    "drug_name": "Diclofenac 50mg",
+    "mae": 1.3888576731962317,
+    "rmse": 1.7851310003612757,
+    "mape": 6.058042550740167,
+    "train_samples": 132,
+    "test_samples": 34,
+    "model_path": "model_9_diclofenac_50mg.pkl",
+    "feature_importance": [
+      {
+        "feature": "is_weekend",
+        "importance": 0.27524104714393616
+      },
+      {
+        "feature": "is_month_end",
+        "importance": 0.20220300555229187
+      },
+      {
+        "feature": "day_of_week",
+        "importance": 0.13708271086215973
+      },
+      {
+        "feature": "day_of_month",
+        "importance": 0.049304381012916565
+      },
+      {
+        "feature": "usage_mean_14d",
+        "importance": 0.04624306038022041
+      },
+      {
+        "feature": "usage_std_7d",
+        "importance": 0.041618071496486664
+      },
+      {
+        "feature": "usage_lag_14",
+        "importance": 0.03645353019237518
+      },
+      {
+        "feature": "usage_lag_7",
+        "importance": 0.03423403203487396
+      },
+      {
+        "feature": "usage_mean_7d",
+        "importance": 0.030492328107357025
+      },
+      {
+        "feature": "stock_level_ratio",
+        "importance": 0.024797702208161354
+      },
+      {
+        "feature": "is_rainy_season",
+        "importance": 0.024480285122990608
+      },
+      {
+        "feature": "usage_std_14d",
+        "importance": 0.02365911938250065
+      },
+      {
+        "feature": "usage_lag_3",
+        "importance": 0.021798638626933098
+      },
+      {
+        "feature": "usage_lag_1",
+        "importance": 0.018273357301950455
+      },
+      {
+        "feature": "week_of_month",
+        "importance": 0.01767244189977646
+      },
+      {
+        "feature": "month",
+        "importance": 0.016446255147457123
+      },
+      {
+        "feature": "recent_stockout",
+        "importance": 0.0
+      }
+    ],
+    "trained_at": "2025-07-08T03:32:44.303562"
+  },
+  {
+    "drug_id": 10,
+    "drug_name": "Metronidazole 400mg",
+    "mae": 1.3567911035874312,
+    "rmse": 1.7182051977743944,
+    "mape": 7.193155207600619,
+    "train_samples": 132,
+    "test_samples": 34,
+    "model_path": "model_10_metronidazole_400mg.pkl",
+    "feature_importance": [
+      {
+        "feature": "usage_mean_7d",
+        "importance": 0.13340498507022858
+      },
+      {
+        "feature": "usage_std_14d",
+        "importance": 0.10375665873289108
+      },
+      {
+        "feature": "is_weekend",
+        "importance": 0.10370303690433502
+      },
+      {
+        "feature": "is_month_end",
+        "importance": 0.09569556266069412
+      },
+      {
+        "feature": "day_of_month",
+        "importance": 0.08700907230377197
+      },
+      {
+        "feature": "usage_std_7d",
+        "importance": 0.07550989091396332
+      },
+      {
+        "feature": "week_of_month",
+        "importance": 0.06176423653960228
+      },
+      {
+        "feature": "usage_mean_14d",
+        "importance": 0.05575927346944809
+      },
+      {
+        "feature": "stock_level_ratio",
+        "importance": 0.05219077318906784
+      },
+      {
+        "feature": "usage_lag_7",
+        "importance": 0.050107162445783615
+      },
+      {
+        "feature": "day_of_week",
+        "importance": 0.04998638480901718
+      },
+      {
+        "feature": "usage_lag_3",
+        "importance": 0.04423251003026962
+      },
+      {
+        "feature": "usage_lag_1",
+        "importance": 0.03527893126010895
+      },
+      {
+        "feature": "usage_lag_14",
+        "importance": 0.03000919707119465
+      },
+      {
+        "feature": "month",
+        "importance": 0.02146836929023266
+      },
+      {
+        "feature": "is_rainy_season",
+        "importance": 0.00012397531827446073
+      },
+      {
+        "feature": "recent_stockout",
+        "importance": 0.0
+      }
+    ],
+    "trained_at": "2025-07-08T03:32:44.764443"
+  }
+]

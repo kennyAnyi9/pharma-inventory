@@ -59,6 +59,30 @@ source venv/bin/activate
 python src/data/generate_synthetic_data.py
 ```
 
+### Train XGBoost Models
+
+```bash
+# From project root
+pnpm run ml:train
+
+# Or directly
+cd apps/ml-service
+source venv/bin/activate
+python src/models/train.py
+```
+
+### Test Model Predictions
+
+```bash
+# From project root
+pnpm run ml:test
+
+# Or directly
+cd apps/ml-service
+source venv/bin/activate
+python src/models/test_predictions.py
+```
+
 ### Drug Usage Patterns
 
 The system generates realistic usage patterns for all 10 drugs with:
@@ -92,11 +116,47 @@ The generated data includes:
 - Provides detailed logging
 - Shows data statistics before insertion
 
+## Machine Learning Models
+
+### XGBoost Features
+
+The system creates **individual forecasting models** for each drug using:
+
+**Time Features:**
+- Day of week, month, week of month
+- Weekend indicator, month-end effects
+
+**Historical Features:**
+- Usage lag features (1, 3, 7, 14 days)
+- Rolling averages and standard deviations
+- Recent stockout patterns
+
+**Ghana-Specific Features:**
+- Rainy season indicator (malaria seasonality)
+- Stock level ratios
+- Economic calendar effects
+
+### Model Performance
+
+- **Individual models** for each of the 10 drugs
+- **XGBoost regression** for demand forecasting
+- **Time series validation** maintaining temporal order
+- **Feature importance** analysis for interpretability
+
 ## Output
 
+### Data Generation
 The system generates approximately **1,800 records** (10 drugs × 180 days) with:
 - Daily usage quantities
 - Stock level calculations
 - Receiving patterns
 - Stockout flags
 - Historical date stamps
+
+### ML Models
+The training produces:
+- **10 trained XGBoost models** (one per drug)
+- **Performance metrics** (MAE, RMSE, MAPE)
+- **Feature importance** rankings
+- **Prediction visualizations** (last 30 days)
+- **Training metadata** and timestamps
