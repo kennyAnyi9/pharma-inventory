@@ -1,9 +1,10 @@
 import httpx
 import json
+import os
 
 # API configuration
 BASE_URL = "http://localhost:8000"
-API_KEY = "ml-service-dev-key-2025"
+API_KEY = os.getenv("ML_API_KEY", "ml-service-dev-key-2025")
 
 def test_health():
     """Test health endpoint"""

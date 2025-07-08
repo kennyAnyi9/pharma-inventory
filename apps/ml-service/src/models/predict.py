@@ -3,7 +3,7 @@ import joblib
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
-from typing import List, Dict, Optional
+from typing import List, Dict
 from sqlalchemy import create_engine, text
 import sys
 
@@ -28,13 +28,17 @@ class PredictionService:
         
         for filename in os.listdir(self.model_dir):
             if filename.endswith('.pkl'):
-                # Extract drug_id from filename
-                parts = filename.split('_')
-                if len(parts) >= 2 and parts[0] == 'model':
-                    drug_id = int(parts[1])
-                    model_path = os.path.join(self.model_dir, filename)
-                    self.models[drug_id] = joblib.load(model_path)
-                    print(f"  Loaded model for drug_id {drug_id}")
+                try:
+                    # Extract drug_id from filename
+                    parts = filename.split('_')
+                    if len(parts) >= 2 and parts[0] == 'model':
+                        drug_id = int(parts[1])
+                        model_path = os.path.join(self.model_dir, filename)
+                        self.models[drug_id] = joblib.load(model_path)
+                        print(f"  Loaded model for drug_id {drug_id}")
+                except Exception as e:
+                    print(f"  Failed to load model {filename}: {e}")
+                    continue
         
         print(f"Loaded {len(self.models)} models")
     
@@ -92,7 +96,7 @@ class PredictionService:
                     SELECT quantity_used
                     FROM inventory
                     WHERE drug_id = :drug_id
-                    AND date >= CURRENT_DATE - INTERVAL ':days days'
+                    AND date >= CURRENT_DATE - INTERVAL '1 day' * :days
                     ORDER BY date DESC
                     LIMIT :days
                 """), {'drug_id': drug_id, 'days': days})

@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException, Depends, Security
 from fastapi.security import APIKeyHeader
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import List, Optional, Dict
+from typing import List, Optional
 from datetime import datetime
 import os
 from dotenv import load_dotenv
@@ -14,7 +14,9 @@ load_dotenv()
 from models.predict import get_prediction_service
 
 # API configuration
-API_KEY = os.getenv("ML_API_KEY", "your-secret-api-key")
+API_KEY = os.getenv("ML_API_KEY")
+if not API_KEY:
+    raise ValueError("ML_API_KEY environment variable must be set")
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
 # Create FastAPI app
@@ -112,10 +114,13 @@ def list_models(api_key: str = Depends(verify_api_key)):
 
 @app.post("/forecast/all", response_model=AllForecastsResponse)
 def forecast_all_drugs(
-    request: ForecastRequest = ForecastRequest(),
+    request: Optional[ForecastRequest] = None,
     api_key: str = Depends(verify_api_key)
 ):
     """Get demand forecast for all drugs"""
+    if request is None:
+        request = ForecastRequest()
+        
     service = get_prediction_service()
     all_forecasts = []
     
@@ -155,10 +160,13 @@ def forecast_all_drugs(
 @app.post("/forecast/{drug_id}", response_model=ForecastResponse)
 def forecast_drug(
     drug_id: int,
-    request: ForecastRequest = ForecastRequest(),
+    request: Optional[ForecastRequest] = None,
     api_key: str = Depends(verify_api_key)
 ):
     """Get demand forecast for a specific drug"""
+    if request is None:
+        request = ForecastRequest()
+        
     service = get_prediction_service()
     
     # Validate drug_id
@@ -198,7 +206,7 @@ def forecast_drug(
         )
         
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 @app.post("/train")
 def trigger_training(api_key: str = Depends(verify_api_key)):
@@ -210,4 +218,4 @@ def trigger_training(api_key: str = Depends(verify_api_key)):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="127.0.0.1", port=8000)

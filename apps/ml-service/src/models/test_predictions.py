@@ -87,21 +87,25 @@ def load_recent_data_for_prediction(drug_id, days_back=14):
     """Load recent data to make realistic predictions"""
     engine = create_engine(DATABASE_URL)
     
-    with engine.connect() as conn:
-        result = conn.execute(text("""
-            SELECT 
-                quantity_used,
-                opening_stock,
-                stockout_flag,
-                date
-            FROM inventory 
-            WHERE drug_id = :drug_id 
-            ORDER BY date DESC 
-            LIMIT :days_back
-        """), {'drug_id': drug_id, 'days_back': days_back})
-        
-        df = pd.DataFrame(result.fetchall(), columns=result.keys())
-    return df
+    try:
+        with engine.connect() as conn:
+            result = conn.execute(text("""
+                SELECT 
+                    quantity_used,
+                    opening_stock,
+                    stockout_flag,
+                    date
+                FROM inventory 
+                WHERE drug_id = :drug_id 
+                ORDER BY date DESC 
+                LIMIT :days_back
+            """), {'drug_id': drug_id, 'days_back': days_back})
+            
+            df = pd.DataFrame(result.fetchall(), columns=result.keys())
+        return df
+    except Exception as e:
+        print(f"Database error: {e}")
+        return pd.DataFrame()  # Return empty DataFrame as fallback
 
 def make_realistic_prediction():
     """Make a prediction using real recent data"""
@@ -121,8 +125,8 @@ def make_realistic_prediction():
     # Extract drug_id from filename (format: model_{drug_id}_{name}.pkl)
     try:
         drug_id = int(model_file.split('_')[1])
-    except:
-        print("Could not extract drug_id from model filename")
+    except (IndexError, ValueError) as e:
+        print(f"Could not extract drug_id from model filename: {e}")
         return
     
     print(f"\nMaking realistic prediction using recent data...")
