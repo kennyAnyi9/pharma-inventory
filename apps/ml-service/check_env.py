@@ -27,7 +27,7 @@ except ImportError as e:
     print(f"❌ sqlalchemy import failed: {e}")
 
 try:
-    from config import DATABASE_URL, HISTORICAL_DAYS
+    from src.config import DATABASE_URL, HISTORICAL_DAYS
     print("✅ config imported successfully")
     print(f"DATABASE_URL configured: {bool(DATABASE_URL)}")
     print(f"HISTORICAL_DAYS: {HISTORICAL_DAYS}")

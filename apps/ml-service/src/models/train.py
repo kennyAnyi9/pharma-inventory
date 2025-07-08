@@ -79,7 +79,7 @@ def create_features(df, drug_id):
     
     # Stock level features
     drug_data['stock_level_ratio'] = drug_data['opening_stock'] / (drug_data['opening_stock'].mean() + 1)
-    drug_data['recent_stockout'] = drug_data['stockout_flag'].rolling(window=7, min_periods=1).max()
+    # Removed recent_stockout feature as it showed zero importance across all models
     
     # Ghana-specific features
     # Rainy season indicator (April-July, Sept-Nov)
@@ -107,7 +107,7 @@ def train_model_for_drug(df, drug_id, drug_name):
         'is_weekend', 'is_month_end', 'is_rainy_season',
         'usage_lag_1', 'usage_lag_3', 'usage_lag_7', 'usage_lag_14',
         'usage_mean_7d', 'usage_std_7d', 'usage_mean_14d', 'usage_std_14d',
-        'stock_level_ratio', 'recent_stockout'
+        'stock_level_ratio'
     ]
     
     X = drug_data[feature_columns]
@@ -143,7 +143,20 @@ def train_model_for_drug(df, drug_id, drug_name):
     # Calculate metrics
     mae = mean_absolute_error(y_test, y_pred)
     rmse = np.sqrt(mean_squared_error(y_test, y_pred))
-    mape = mean_absolute_percentage_error(y_test, y_pred) * 100
+    
+    # Calculate MAPE with protection against zero/near-zero values
+    # Filter out cases where y_test is zero or near-zero to avoid division by zero
+    epsilon = 1e-8
+    non_zero_mask = np.abs(y_test) > epsilon
+    
+    if np.sum(non_zero_mask) > 0:
+        # Calculate MAPE only for non-zero true values
+        y_test_filtered = y_test[non_zero_mask]
+        y_pred_filtered = y_pred[non_zero_mask]
+        mape = mean_absolute_percentage_error(y_test_filtered, y_pred_filtered) * 100
+    else:
+        # If all true values are zero/near-zero, use MAE as fallback
+        mape = mae  # or set to a reasonable default like 100.0
     
     # Feature importance
     feature_importance = pd.DataFrame({
@@ -192,7 +205,7 @@ def visualize_predictions(df, drug_id, drug_name, model):
             'is_weekend', 'is_month_end', 'is_rainy_season',
             'usage_lag_1', 'usage_lag_3', 'usage_lag_7', 'usage_lag_14',
             'usage_mean_7d', 'usage_std_7d', 'usage_mean_14d', 'usage_std_14d',
-            'stock_level_ratio', 'recent_stockout'
+            'stock_level_ratio'
         ]
         
         X = drug_data[feature_columns]

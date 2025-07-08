@@ -34,3 +34,16 @@ npm-debug.log*
 # Misc
 .DS_Store
 *.pem
+
+# Python virtual environments
+venv/
+env/
+.venv/
+.env
+**/__pycache__/
+
+# Python packaging artifacts
+*.egg-info/
+*.egg
+dist/
+build/

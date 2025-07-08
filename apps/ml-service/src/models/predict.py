@@ -134,8 +134,7 @@ class PredictionService:
             'usage_std_7d': [np.std(usage_values[:7]) if len(usage_values) >= 7 else 5],
             'usage_mean_14d': [np.mean(usage_values[:14]) if len(usage_values) >= 14 else 30],
             'usage_std_14d': [np.std(usage_values[:14]) if len(usage_values) >= 14 else 5],
-            'stock_level_ratio': [1.0],  # Simplified
-            'recent_stockout': [0]  # Simplified
+            'stock_level_ratio': [1.0]  # Simplified
         })
         
         return features
