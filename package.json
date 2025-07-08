@@ -12,7 +12,11 @@
     "db:push": "turbo db:push",
     "db:seed": "turbo db:seed",
     "db:studio": "pnpm --filter @workspace/database db:studio",
-    "generate-data": "cd apps/ml-service && python src/data/generate_synthetic_data.py"
+    "generate-data": "cd apps/ml-service && python3 src/data/generate_synthetic_data.py",
+    "ml:train": "cd apps/ml-service && python3 src/models/train.py",
+    "ml:test": "cd apps/ml-service && python3 src/models/test_predictions.py",
+    "ml:dev": "cd apps/ml-service && ./run.sh",
+    "ml:test-api": "cd apps/ml-service && python3 test_api.py"
   },
   "devDependencies": {
     "@workspace/eslint-config": "workspace:*",
