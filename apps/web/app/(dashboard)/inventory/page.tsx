@@ -7,22 +7,29 @@ import {
   CardHeader,
   CardTitle,
 } from "@workspace/ui/components/card";
-import { Skeleton } from "@workspace/ui/components/skeleton";
 
 export default async function InventoryPage() {
   let inventory: Awaited<ReturnType<typeof getInventoryStatus>> = [];
-  let counts: Record<string, number> = { critical: 0, low: 0, normal: 0, good: 0 };
+  let counts: Record<string, number> = {
+    critical: 0,
+    low: 0,
+    normal: 0,
+    good: 0,
+  };
 
   try {
     inventory = await getInventoryStatus();
-    
+
     // Pre-compute counts for better performance
-    counts = inventory.reduce((acc, item) => {
-      acc[item.stockStatus] = (acc[item.stockStatus] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    counts = inventory.reduce(
+      (acc, item) => {
+        acc[item.stockStatus] = (acc[item.stockStatus] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>
+    );
   } catch (error) {
-    console.error('Failed to load inventory data:', error);
+    console.error("Failed to load inventory data:", error);
     inventory = [];
     counts = { critical: 0, low: 0, normal: 0, good: 0 };
   }

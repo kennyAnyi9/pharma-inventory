@@ -117,23 +117,21 @@ def forecast_all_drugs(
     request: Optional[ForecastRequest] = None,
     api_key: str = Depends(verify_api_key)
 ):
-    """Get demand forecast for all drugs"""
+    """Get demand forecast for all drugs - OPTIMIZED"""
     if request is None:
         request = ForecastRequest()
         
     service = get_prediction_service()
-    all_forecasts = []
     
-    for drug_id in sorted(service.models.keys()):
-        try:
-            # Get predictions
-            predictions = service.predict_demand(drug_id, request.days)
-            current_stock = service.get_current_stock(drug_id)
-            drug_info = service.drug_info.get(drug_id, {
-                'name': f'Drug {drug_id}',
-                'unit': 'units',
-                'reorder_level': 50
-            })
+    try:
+        # Use the new optimized method
+        all_predictions = service.predict_all_drugs(request.days)
+        all_forecasts = []
+        
+        for drug_id, data in all_predictions.items():
+            drug_info = service.drug_info[drug_id]
+            predictions = data['predictions']
+            current_stock = data['current_stock']
             total_7_days = sum(p['predicted_demand'] for p in predictions[:7])
             recommendation = service.get_recommendation(drug_id, current_stock, predictions)
             
@@ -148,14 +146,14 @@ def forecast_all_drugs(
                 recommendation=recommendation,
                 generated_at=datetime.now().isoformat()
             ))
-        except Exception as e:
-            print(f"Error forecasting drug {drug_id}: {str(e)}")
-            continue
-    
-    return AllForecastsResponse(
-        forecasts=all_forecasts,
-        generated_at=datetime.now().isoformat()
-    )
+        
+        return AllForecastsResponse(
+            forecasts=all_forecasts,
+            generated_at=datetime.now().isoformat()
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/forecast/{drug_id}", response_model=ForecastResponse)
 def forecast_drug(

@@ -18,11 +18,12 @@
     "drizzle-orm": "^0.30.0"
   },
   "devDependencies": {
-    "@workspace/typescript-config": "workspace:*",
     "@types/node": "^20.0.0",
+    "@workspace/typescript-config": "workspace:*",
+    "dotenv": "^16.4.0",
     "drizzle-kit": "^0.21.0",
+    "esbuild-register": "^3.6.0",
     "tsx": "^4.0.0",
-    "typescript": "^5.4.5",
-    "dotenv": "^16.4.0"
+    "typescript": "^5.4.5"
   }
 }

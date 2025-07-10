@@ -9,7 +9,7 @@ API_KEY = os.getenv("ML_API_KEY", "ml-service-dev-key-2025")
 def test_health():
     """Test health endpoint"""
     print("Testing health endpoint...")
-    response = httpx.get(f"{BASE_URL}/health")
+    response = httpx.get(f"{BASE_URL}/health", timeout=30.0)
     print("Health Check:", json.dumps(response.json(), indent=2))
     return response.status_code == 200
 
@@ -17,7 +17,7 @@ def test_models():
     """Test models endpoint"""
     print("\nTesting models endpoint...")
     headers = {"X-API-Key": API_KEY}
-    response = httpx.get(f"{BASE_URL}/models", headers=headers)
+    response = httpx.get(f"{BASE_URL}/models", headers=headers, timeout=30.0)
     
     if response.status_code == 200:
         print("Loaded Models:", json.dumps(response.json(), indent=2))
@@ -33,7 +33,8 @@ def test_forecast_single():
     response = httpx.post(
         f"{BASE_URL}/forecast/1",
         headers=headers,
-        json={"days": 7}
+        json={"days": 7},
+        timeout=60.0
     )
     
     if response.status_code == 200:
@@ -50,7 +51,8 @@ def test_forecast_all():
     response = httpx.post(
         f"{BASE_URL}/forecast/all",
         headers=headers,
-        json={"days": 7}
+        json={"days": 7},
+        timeout=120.0
     )
     
     if response.status_code == 200:
@@ -66,7 +68,7 @@ def test_forecast_all():
 def test_unauthorized():
     """Test unauthorized access"""
     print("\nTesting unauthorized access...")
-    response = httpx.get(f"{BASE_URL}/models")
+    response = httpx.get(f"{BASE_URL}/models", timeout=30.0)
     
     if response.status_code == 401:
         print("✅ Unauthorized access properly blocked")
