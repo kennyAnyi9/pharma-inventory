@@ -49,7 +49,7 @@ class PredictionService:
         try:
             with engine.connect() as conn:
                 result = conn.execute(text("""
-                    SELECT id, name, unit, reorderlevel, reorderquantity
+                    SELECT id, name, unit, reorder_level, reorder_quantity
                     FROM drugs
                     ORDER BY id
                 """))
@@ -106,6 +106,50 @@ class PredictionService:
         except Exception as e:
             print(f"Error getting recent usage: {e}")
             return []
+    
+    def get_recent_usage_batch(self, days: int = 14) -> Dict[int, pd.DataFrame]:
+        """Get recent usage data for ALL drugs at once"""
+        engine = create_engine(DATABASE_URL)
+        
+        try:
+            query = """
+            SELECT drug_id, date, quantity_used, opening_stock, closing_stock
+            FROM inventory
+            WHERE date >= CURRENT_DATE - INTERVAL '1 day' * :days
+            ORDER BY drug_id, date DESC
+            """
+            
+            df = pd.read_sql(query, engine, params={'days': days})
+            df['date'] = pd.to_datetime(df['date'])
+            
+            # Group by drug_id
+            usage_by_drug = {}
+            for drug_id, group in df.groupby('drug_id'):
+                usage_by_drug[drug_id] = group.sort_values('date', ascending=False)
+            
+            return usage_by_drug
+        except Exception as e:
+            print(f"Error getting batch usage data: {e}")
+            return {}
+    
+    def get_all_current_stock(self) -> Dict[int, int]:
+        """Get current stock levels for all drugs in one query"""
+        engine = create_engine(DATABASE_URL)
+        
+        try:
+            with engine.connect() as conn:
+                result = conn.execute(text("""
+                    SELECT DISTINCT ON (drug_id) 
+                        drug_id, 
+                        closing_stock
+                    FROM inventory
+                    ORDER BY drug_id, date DESC
+                """))
+                
+                return {row[0]: row[1] for row in result}
+        except Exception as e:
+            print(f"Error getting all current stock: {e}")
+            return {}
     
     def prepare_features(self, drug_id: int, forecast_date: datetime) -> pd.DataFrame:
         """Prepare features for prediction"""
@@ -168,6 +212,72 @@ class PredictionService:
                 'predicted_demand': round(float(pred), 1),
                 'day_of_week': forecast_date.strftime('%A')
             })
+        
+        return predictions
+    
+    def predict_all_drugs(self, days: int = 7) -> Dict[int, List[Dict]]:
+        """Optimized method to predict all drugs at once"""
+        # Get all recent usage data in ONE query
+        all_usage = self.get_recent_usage_batch()
+        
+        # Get all current stock in ONE query
+        all_stock = self.get_all_current_stock()
+        
+        predictions = {}
+        
+        for drug_id, model in self.models.items():
+            # Use cached usage data
+            recent_usage = all_usage.get(drug_id, pd.DataFrame())
+            
+            # Generate predictions for this drug
+            drug_predictions = []
+            start_date = datetime.now().date() + timedelta(days=1)
+            
+            # Prepare usage values once
+            if len(recent_usage) == 0:
+                usage_values = [30] * 14
+            else:
+                usage_values = recent_usage['quantity_used'].tolist()[:14]
+                mean_usage = recent_usage['quantity_used'].mean()
+                while len(usage_values) < 14:
+                    usage_values.append(mean_usage)
+            
+            # Batch prepare features for all days
+            for i in range(days):
+                forecast_date = start_date + timedelta(days=i)
+                
+                features = pd.DataFrame({
+                    'day_of_week': [forecast_date.weekday()],
+                    'day_of_month': [forecast_date.day],
+                    'month': [forecast_date.month],
+                    'week_of_month': [(forecast_date.day - 1) // 7 + 1],
+                    'is_weekend': [1 if forecast_date.weekday() >= 5 else 0],
+                    'is_month_end': [1 if forecast_date.day > 25 else 0],
+                    'is_rainy_season': [1 if forecast_date.month in [4, 5, 6, 7, 9, 10, 11] else 0],
+                    'usage_lag_1': [usage_values[0]],
+                    'usage_lag_3': [usage_values[2] if len(usage_values) > 2 else 30],
+                    'usage_lag_7': [usage_values[6] if len(usage_values) > 6 else 30],
+                    'usage_lag_14': [usage_values[13] if len(usage_values) > 13 else 30],
+                    'usage_mean_7d': [np.mean(usage_values[:7])],
+                    'usage_std_7d': [np.std(usage_values[:7]) if len(usage_values) >= 7 else 5],
+                    'usage_mean_14d': [np.mean(usage_values[:14])],
+                    'usage_std_14d': [np.std(usage_values[:14]) if len(usage_values) >= 14 else 5],
+                    'stock_level_ratio': [1.0]
+                })
+                
+                pred = model.predict(features)[0]
+                pred = max(0, pred)
+                
+                drug_predictions.append({
+                    'date': forecast_date.isoformat(),
+                    'predicted_demand': round(float(pred), 1),
+                    'day_of_week': forecast_date.strftime('%A')
+                })
+            
+            predictions[drug_id] = {
+                'predictions': drug_predictions,
+                'current_stock': all_stock.get(drug_id, 0)
+            }
         
         return predictions
     
