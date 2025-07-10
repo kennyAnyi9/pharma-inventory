@@ -64,3 +64,6 @@ apps/ml-service/models/forecast_*.png
 # Documentation files
 *.md
 !README.md
+
+# But allow essential scripts
+!run.sh
