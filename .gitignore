@@ -47,3 +47,20 @@ env/
 *.egg
 dist/
 build/
+
+# ML model files (large binary files)
+apps/ml-service/models/trained/*.pkl
+apps/ml-service/models/forecast_*.png
+
+# Debug and diagnostic files
+**/debug_models.py
+**/diagnostics.py
+**/diagnostic_report.txt
+**/performance_report.txt
+**/fix_models.py
+**/simple_test.py
+**/test_performance.py
+
+# Documentation files
+*.md
+!README.md
