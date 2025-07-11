@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { format } from "date-fns";
-import { ArrowLeft, Package, User, Calendar, Truck, FileText } from "lucide-react";
+import { ArrowLeft, Package, User, Calendar, FileText } from "lucide-react";
 import { Button } from "@workspace/ui/components/button";
 import { Badge } from "@workspace/ui/components/badge";
 import {
@@ -22,14 +22,13 @@ import {
 import {
   getOrderById,
   getOrderHistory,
-  updateOrderStatus,
 } from "@/features/orders/actions/order-actions";
 import { OrderStatusActions } from "@/features/orders/components/order-status-actions";
 
 interface OrderDetailPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 const statusColors = {
@@ -43,7 +42,8 @@ const statusColors = {
 };
 
 export default async function OrderDetailPage({ params }: OrderDetailPageProps) {
-  const orderId = parseInt(params.id);
+  const { id } = await params;
+  const orderId = parseInt(id);
   if (isNaN(orderId)) {
     notFound();
   }

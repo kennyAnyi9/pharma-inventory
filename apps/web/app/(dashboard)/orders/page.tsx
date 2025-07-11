@@ -1,6 +1,5 @@
 import { Suspense } from "react";
-import { Package, Plus } from "lucide-react";
-import { Button } from "@workspace/ui/components/button";
+import { Package } from "lucide-react";
 import {
   Tabs,
   TabsContent,
