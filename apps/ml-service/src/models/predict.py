@@ -115,7 +115,7 @@ class PredictionService:
             query = """
             SELECT drug_id, date, quantity_used, opening_stock, closing_stock
             FROM inventory
-            WHERE date >= CURRENT_DATE - INTERVAL '1 day' * :days
+            WHERE date >= CURRENT_DATE - INTERVAL %(days)s DAY
             ORDER BY drug_id, date DESC
             """
             
