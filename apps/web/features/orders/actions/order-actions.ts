@@ -24,7 +24,7 @@ export interface OrderWithDetails {
   orderDate: Date;
   expectedDeliveryDate: Date | null;
   actualDeliveryDate: Date | null;
-  totalAmount: string;
+  totalAmount: string | null;
   notes: string | null;
   createdBy: string | null;
   approvedBy: string | null;
@@ -42,7 +42,7 @@ export interface OrderItemWithDrug {
   quantity: number;
   unitPrice: string;
   totalPrice: string;
-  quantityReceived: number;
+  quantityReceived: number | null;
   expiryDate: Date | null;
   batchNumber: string | null;
   notes: string | null;
@@ -100,19 +100,21 @@ export async function createOrder(data: z.infer<typeof createOrderSchema>) {
       .returning();
 
     // Create order items
-    for (const item of items) {
-      const totalPrice = item.quantity * item.unitPrice;
-      await db.insert(orderItems).values({
-        orderId: newOrder.id,
+    if (newOrder?.id) {
+      for (const item of items) {
+        const totalPrice = item.quantity * item.unitPrice;
+        await db.insert(orderItems).values({
+          orderId: newOrder.id,
         drugId: item.drugId,
         quantity: item.quantity,
         unitPrice: item.unitPrice.toString(),
         totalPrice: totalPrice.toString(),
-      });
+        });
+      }
     }
 
     // Link to alerts if provided
-    if (alertIds && alertIds.length > 0) {
+    if (alertIds && alertIds.length > 0 && newOrder?.id) {
       for (const alertId of alertIds) {
         await db.insert(orderAlerts).values({
           orderId: newOrder.id,
@@ -122,18 +124,20 @@ export async function createOrder(data: z.infer<typeof createOrderSchema>) {
     }
 
     // Add to history
-    await db.insert(orderHistory).values({
-      orderId: newOrder.id,
-      toStatus: "draft",
-      notes: "Order created",
-      changedBy: "user",
-    });
+    if (newOrder?.id) {
+      await db.insert(orderHistory).values({
+        orderId: newOrder.id,
+        toStatus: "draft",
+        notes: "Order created",
+        changedBy: "user",
+      });
+    }
 
     revalidatePath("/dashboard/orders");
     return {
       success: true,
       message: "Order created successfully",
-      orderId: newOrder.id,
+      orderId: newOrder?.id || 0,
     };
   } catch (error) {
     console.error("Error creating order:", error);
@@ -173,7 +177,7 @@ export async function updateOrderStatus(
       return { success: false, message: "Order not found" };
     }
 
-    const fromStatus = currentOrder[0].status;
+    const fromStatus = currentOrder[0]?.status;
 
     // Update order
     const updateData: any = {
@@ -387,7 +391,7 @@ export async function createSupplier(data: z.infer<typeof createSupplierSchema>)
     return {
       success: true,
       message: "Supplier created successfully",
-      supplierId: newSupplier.id,
+      supplierId: newSupplier?.id || 0,
     };
   } catch (error) {
     console.error("Error creating supplier:", error);

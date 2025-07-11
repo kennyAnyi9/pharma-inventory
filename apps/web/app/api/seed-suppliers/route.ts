@@ -95,7 +95,7 @@ export async function GET() {
         results.push({ 
           supplier: supplier.name, 
           status: 'created', 
-          id: newSupplier.id 
+          id: newSupplier?.id || 0
         });
         
       } catch (error) {
@@ -118,7 +118,7 @@ export async function GET() {
       success: true,
       message: 'Suppliers seeded successfully!',
       results,
-      totalActiveSuppliers: totalSuppliers[0].count
+      totalActiveSuppliers: totalSuppliers[0]?.count || 0
     });
     
   } catch (error) {

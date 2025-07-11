@@ -77,7 +77,7 @@ export function CreateOrderDialog({
     value: string | number
   ) => {
     const newItems = [...items];
-    if (field === "drugId") {
+    if (field === "drugId" && newItems[index]) {
       newItems[index][field] = Number(value);
       // Auto-fill unit price when drug is selected
       const drug = drugs.find((d) => d.id === Number(value));
@@ -85,7 +85,7 @@ export function CreateOrderDialog({
         newItems[index].unitPrice = parseFloat(drug.unitPrice);
         newItems[index].quantity = drug.reorderQuantity || 1;
       }
-    } else {
+    } else if (newItems[index]) {
       newItems[index][field] = Number(value);
     }
     setItems(newItems);

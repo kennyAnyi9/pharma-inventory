@@ -57,7 +57,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
     notFound();
   }
 
-  const totalAmount = parseFloat(order.totalAmount);
+  const totalAmount = parseFloat(order.totalAmount || "0");
 
   return (
     <div className="space-y-6">
@@ -180,14 +180,14 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                       <TableCell className="text-right">
                         <Badge
                           variant={
-                            item.quantityReceived >= item.quantity
+                            (item.quantityReceived || 0) >= item.quantity
                               ? "default"
-                              : item.quantityReceived > 0
+                              : (item.quantityReceived || 0) > 0
                                 ? "secondary"
                                 : "outline"
                           }
                         >
-                          {item.quantityReceived} / {item.quantity}
+                          {item.quantityReceived || 0} / {item.quantity}
                         </Badge>
                       </TableCell>
                     </TableRow>
