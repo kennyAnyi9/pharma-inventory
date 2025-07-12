@@ -3,6 +3,9 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@workspace/ui/lib/utils'
+import { AlertNotification } from '@/features/alerts/components/alert-notification'
+import { useEffect, useState } from 'react'
+import { getAlerts } from '@/features/alerts/actions/alert-actions'
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', description: 'View pharmacy dashboard overview' },
@@ -11,6 +14,41 @@ const navigation = [
   { name: 'Alerts', href: '/alerts', description: 'Check low stock and expiry alerts' },
   { name: 'Orders', href: '/orders', description: 'Manage purchase orders and deliveries' },
 ]
+
+function AlertNotificationWrapper() {
+  const [alerts, setAlerts] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const loadAlerts = async () => {
+    try {
+      const activeAlerts = await getAlerts('active')
+      setAlerts(activeAlerts.slice(0, 5)) // Show only recent 5
+    } catch (error) {
+      console.error('Error loading alerts:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadAlerts()
+    // Refresh alerts every 30 seconds
+    const interval = setInterval(loadAlerts, 30000)
+    return () => clearInterval(interval)
+  }, [])
+
+  if (loading) return null
+
+  const unreadCount = alerts.filter(alert => !alert.isRead).length
+
+  return (
+    <AlertNotification 
+      alerts={alerts} 
+      unreadCount={unreadCount}
+      onUpdate={loadAlerts}
+    />
+  )
+}
 
 function NavigationClient({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -47,6 +85,15 @@ function NavigationClient({ children }: { children: React.ReactNode }) {
 
       {/* Main content */}
       <div className="flex-1">
+        {/* Top header with alerts */}
+        <header className="border-b bg-background">
+          <div className="container mx-auto flex h-16 items-center justify-between px-6">
+            <div></div>
+            <div className="flex items-center gap-4">
+              <AlertNotificationWrapper />
+            </div>
+          </div>
+        </header>
         <main className="container mx-auto p-6">{children}</main>
       </div>
     </div>

@@ -1,0 +1,35 @@
+{
+  "timestamp": "2025-07-09T15:46:47.901Z",
+  "environment": {
+    "ML_SERVICE_URL": "http://localhost:8000",
+    "ML_API_KEY": "SET",
+    "NODE_ENV": "development"
+  },
+  "tests": [
+    {
+      "test": "ML Service Health",
+      "success": true,
+      "status": 200,
+      "time": 4,
+      "data": {
+        "status": "healthy",
+        "models_loaded": 10,
+        "timestamp": "2025-07-09T15:46:47.903756"
+      }
+    },
+    {
+      "test": "Single Drug Forecast",
+      "success": false,
+      "error": "The operation was aborted due to timeout"
+    },
+    {
+      "test": "Database Query",
+      "success": true,
+      "time": 782,
+      "drugCount": 10
+    }
+  ],
+  "totalTime": 10917,
+  "isProduction": false,
+  "isVercel": false
+}

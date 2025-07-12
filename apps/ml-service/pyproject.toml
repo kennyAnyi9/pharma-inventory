@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pharma-ml-service"
+version = "0.1.0"
+description = "ML service for pharmaceutical inventory management"
+authors = [{name = "Pharma Inventory Team"}]
+dependencies = [
+    "pandas==2.1.4",
+    "numpy==1.24.3",
+    "python-dotenv==1.0.0",
+    "psycopg2-binary==2.9.9",
+    "sqlalchemy==2.0.23"
+]
+requires-python = ">=3.8"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-dir]
+"" = "src"
