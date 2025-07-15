@@ -14,7 +14,7 @@ load_dotenv()
 from models.predict import get_prediction_service
 
 # API configuration
-API_KEY = os.getenv("ML_API_KEY")
+API_KEY = os.getenv("ML_API_KEY", "ml-service-dev-key-2025")
 if not API_KEY:
     raise ValueError("ML_API_KEY environment variable must be set")
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
@@ -125,13 +125,14 @@ def forecast_all_drugs(
     
     try:
         # Use the new optimized method
-        all_predictions = service.predict_all_drugs(request.days)
+        days = request.days if request.days is not None else 7
+        all_predictions = service.predict_all_drugs(days)
         all_forecasts = []
         
         for drug_id, data in all_predictions.items():
             drug_info = service.drug_info[drug_id]
-            predictions = data['predictions']
-            current_stock = data['current_stock']
+            predictions = data.get('predictions', [])
+            current_stock = data.get('current_stock', 0)
             total_7_days = sum(p['predicted_demand'] for p in predictions[:7])
             recommendation = service.get_recommendation(drug_id, current_stock, predictions)
             
@@ -173,7 +174,8 @@ def forecast_drug(
     
     try:
         # Get predictions
-        predictions = service.predict_demand(drug_id, request.days)
+        days = request.days if request.days is not None else 7
+        predictions = service.predict_demand(drug_id, days)
         
         # Get current stock
         current_stock = service.get_current_stock(drug_id)
@@ -216,4 +218,5 @@ def trigger_training(api_key: str = Depends(verify_api_key)):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)

@@ -215,7 +215,7 @@ class PredictionService:
         
         return predictions
     
-    def predict_all_drugs(self, days: int = 7) -> Dict[int, List[Dict]]:
+    def predict_all_drugs(self, days: int = 7) -> Dict[int, Dict]:
         """Optimized method to predict all drugs at once"""
         # Get all recent usage data in ONE query
         all_usage = self.get_recent_usage_batch()

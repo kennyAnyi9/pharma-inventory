@@ -10,7 +10,8 @@ load_dotenv(env_path)
 # Database
 DATABASE_URL = os.getenv('DATABASE_URL')
 if not DATABASE_URL:
-    raise ValueError("DATABASE_URL environment variable is not set")
+    print("Warning: DATABASE_URL environment variable is not set. Some features may not work.")
+    DATABASE_URL = "postgresql://user:password@localhost:5432/pharma_inventory"  # Default for development
 
 # Add pooling parameters for better performance
 DATABASE_CONFIG = {
