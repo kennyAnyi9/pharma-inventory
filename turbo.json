@@ -2,13 +2,13 @@
   "$schema": "https://turbo.build/schema.json",
   "ui": "tui",
   "globalDependencies": ["**/.env.*local"],
-  "globalEnv": ["DATABASE_URL", "ML_API_KEY", "ML_SERVICE_URL", "NODE_ENV", "VERCEL"],
+  "globalEnv": ["DATABASE_URL", "ML_API_KEY", "ML_SERVICE_URL", "NODE_ENV", "VERCEL", "CRON_SECRET"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "outputs": [".next/**", "!.next/cache/**", "dist/**"],
-      "env": ["DATABASE_URL", "ML_API_KEY", "ML_SERVICE_URL", "NODE_ENV", "VERCEL"]
+      "env": ["DATABASE_URL", "ML_API_KEY", "ML_SERVICE_URL", "NODE_ENV", "VERCEL", "CRON_SECRET"]
     },
     "dev": {
       "cache": false,
