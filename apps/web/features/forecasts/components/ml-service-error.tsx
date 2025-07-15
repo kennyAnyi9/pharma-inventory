@@ -40,7 +40,7 @@ export function MLServiceError() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => window.open('http://localhost:8000/health', '_blank')}
+            onClick={() => window.open('https://pharma-inventory-production.up.railway.app/health', '_blank')}
             className="text-red-700 border-red-300 hover:bg-red-100"
           >
             <Settings className="mr-2 h-4 w-4" />

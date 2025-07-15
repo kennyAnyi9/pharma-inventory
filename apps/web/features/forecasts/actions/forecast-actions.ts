@@ -33,8 +33,8 @@ const getCachedForecasts = unstable_cache(
 )
 
 async function fetchAllForecasts(): Promise<AllForecastsResponse | null> {
-  const ML_SERVICE_URL = process.env.ML_SERVICE_URL
-  const ML_API_KEY = process.env.ML_API_KEY
+  const ML_SERVICE_URL = process.env.ML_SERVICE_URL || 'https://pharma-inventory-production.up.railway.app'
+  const ML_API_KEY = process.env.ML_API_KEY || 'ml-service-dev-key-2025'
 
   if (!ML_SERVICE_URL || !ML_API_KEY) {
     console.error('ML service configuration missing')

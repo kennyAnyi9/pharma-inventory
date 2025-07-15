@@ -39,7 +39,7 @@ export interface AlertGenerationResult {
 async function getMLPredictions() {
   try {
     const ML_SERVICE_URL =
-      process.env.ML_SERVICE_URL || "http://localhost:8000";
+      process.env.ML_SERVICE_URL || "https://pharma-inventory-production.up.railway.app";
     const ML_API_KEY = process.env.ML_API_KEY || "ml-service-dev-key-2025";
 
     const response = await fetch(`${ML_SERVICE_URL}/forecast/all`, {
