@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { headers } from 'next/headers'
 import { generateAlerts } from '@/features/alerts/actions/alert-actions'
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     // Verify the request is from Vercel Cron
-    const headersList = headers()
+    const headersList = await headers()
     const authorization = headersList.get('authorization')
     
     // Check for Vercel Cron secret
