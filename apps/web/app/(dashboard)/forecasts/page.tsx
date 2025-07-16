@@ -7,6 +7,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@work
 import { Badge } from '@workspace/ui/components/badge'
 import { Brain, TrendingUp, AlertTriangle, CheckCircle } from 'lucide-react'
 
+// Force dynamic rendering - no caching for real-time forecasts
+export const dynamic = 'force-dynamic'
+
 async function ForecastsContent() {
   const data = await getAllForecasts()
 

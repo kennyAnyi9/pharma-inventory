@@ -10,6 +10,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@workspace/ui/components/button'
 import { Skeleton } from '@workspace/ui/components/skeleton'
 
+// Force dynamic rendering - no caching for real-time dashboard
+export const dynamic = 'force-dynamic'
+
 interface DashboardContentProps {
   searchParams?: Promise<{ 
     page?: string;

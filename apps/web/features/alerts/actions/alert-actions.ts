@@ -110,7 +110,7 @@ export async function generateAlerts(): Promise<AlertGenerationResult> {
     // Resolve alerts that are no longer relevant
     await resolveOutdatedAlerts(inventoryData, result);
 
-    revalidatePath("/dashboard/alerts");
+    revalidatePath("/alerts");
     return result;
   } catch (error) {
     console.error("Error generating alerts:", error);
@@ -343,7 +343,7 @@ export async function acknowledgeAlert(
       notes: notes || "Alert acknowledged by user",
     });
 
-    revalidatePath("/dashboard/alerts");
+    revalidatePath("/alerts");
     return { success: true, message: "Alert acknowledged successfully" };
   } catch (error) {
     console.error("Error acknowledging alert:", error);
@@ -379,7 +379,7 @@ export async function dismissAlert(data: z.infer<typeof dismissAlertSchema>) {
       notes: notes || "Alert dismissed by user",
     });
 
-    revalidatePath("/dashboard/alerts");
+    revalidatePath("/alerts");
     return { success: true, message: "Alert dismissed successfully" };
   } catch (error) {
     console.error("Error dismissing alert:", error);
@@ -398,7 +398,7 @@ export async function markAlertAsRead(alertId: number) {
       })
       .where(eq(alerts.id, alertId));
 
-    revalidatePath("/dashboard/alerts");
+    revalidatePath("/alerts");
     return { success: true };
   } catch (error) {
     console.error("Error marking alert as read:", error);

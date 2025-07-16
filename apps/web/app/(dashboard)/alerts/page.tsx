@@ -17,6 +17,9 @@ import { AlertTriangle, RefreshCw } from "lucide-react";
 import { revalidatePath } from "next/cache";
 import { Suspense } from "react";
 
+// Force dynamic rendering - no caching for real-time alerts
+export const dynamic = 'force-dynamic'
+
 export default async function AlertsPage() {
   const [allAlerts, alertCounts] = await Promise.all([
     getAlerts(),
@@ -34,7 +37,7 @@ export default async function AlertsPage() {
   async function handleGenerateAlerts() {
     "use server";
     await generateAlerts();
-    revalidatePath("/dashboard/alerts");
+    revalidatePath("/alerts");
   }
 
   return (

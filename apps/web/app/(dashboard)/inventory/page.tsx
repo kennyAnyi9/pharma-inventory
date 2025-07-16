@@ -8,6 +8,9 @@ import {
   CardTitle,
 } from "@workspace/ui/components/card";
 
+// Force dynamic rendering - no caching for real-time inventory
+export const dynamic = 'force-dynamic'
+
 export default async function InventoryPage() {
   let inventory: Awaited<ReturnType<typeof getInventoryStatus>> = [];
   let counts: Record<string, number> = {

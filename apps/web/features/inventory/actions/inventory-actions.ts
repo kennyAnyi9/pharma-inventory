@@ -121,9 +121,9 @@ export async function updateStock(data: z.infer<typeof updateStockSchema>) {
     }
 
     revalidatePath('/dashboard')
-    revalidatePath('/dashboard/inventory')
-    revalidatePath('/dashboard/forecasts')
-    revalidatePath('/dashboard/alerts')
+    revalidatePath('/inventory')
+    revalidatePath('/forecasts')
+    revalidatePath('/alerts')
 
     return { success: true }
   } catch (error) {
@@ -199,9 +199,9 @@ export async function recordUsage(data: z.infer<typeof recordUsageSchema>) {
     }
 
     revalidatePath('/dashboard')
-    revalidatePath('/dashboard/inventory')
-    revalidatePath('/dashboard/forecasts')
-    revalidatePath('/dashboard/alerts')
+    revalidatePath('/inventory')
+    revalidatePath('/forecasts')
+    revalidatePath('/alerts')
 
     return { success: true }
   } catch (error) {

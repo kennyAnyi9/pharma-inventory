@@ -133,7 +133,7 @@ export async function createOrder(data: z.infer<typeof createOrderSchema>) {
       });
     }
 
-    revalidatePath("/dashboard/orders");
+    revalidatePath("/orders");
     return {
       success: true,
       message: "Order created successfully",
@@ -204,7 +204,7 @@ export async function updateOrderStatus(
       changedBy: "user",
     });
 
-    revalidatePath("/dashboard/orders");
+    revalidatePath("/orders");
     return { success: true, message: "Order status updated successfully" };
   } catch (error) {
     console.error("Error updating order status:", error);
@@ -387,7 +387,7 @@ export async function createSupplier(data: z.infer<typeof createSupplierSchema>)
       .values(supplierData)
       .returning();
 
-    revalidatePath("/dashboard/orders");
+    revalidatePath("/orders");
     return {
       success: true,
       message: "Supplier created successfully",
@@ -424,7 +424,7 @@ export async function updateOrderItem(data: z.infer<typeof updateOrderItemSchema
       })
       .where(eq(orderItems.id, orderItemId));
 
-    revalidatePath("/dashboard/orders");
+    revalidatePath("/orders");
     return { success: true, message: "Order item updated successfully" };
   } catch (error) {
     console.error("Error updating order item:", error);
