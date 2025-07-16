@@ -3,8 +3,9 @@
 import { db } from '@/lib/db'
 import { drugs, inventory } from '@workspace/database'
 import { eq, desc, and, sql } from 'drizzle-orm'
-import { revalidatePath, revalidateTag } from 'next/cache'
+import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
+import { generateAlerts } from '@/features/alerts/actions/alert-actions'
 
 // Schema validators
 const updateStockSchema = z.object({
@@ -111,12 +112,18 @@ export async function updateStock(data: z.infer<typeof updateStockSchema>) {
       })
     }
 
+    // Auto-generate alerts for real-time reorder level calculations
+    try {
+      await generateAlerts()
+    } catch (error) {
+      console.error('Failed to generate alerts after stock update:', error)
+      // Don't fail the stock update if alert generation fails
+    }
+
     revalidatePath('/dashboard')
     revalidatePath('/dashboard/inventory')
     revalidatePath('/dashboard/forecasts')
     revalidatePath('/dashboard/alerts')
-    // Invalidate the forecast cache tag since inventory affects predictions
-    revalidateTag('all-forecasts')
 
     return { success: true }
   } catch (error) {
@@ -183,12 +190,18 @@ export async function recordUsage(data: z.infer<typeof recordUsageSchema>) {
       })
     }
 
+    // Auto-generate alerts for real-time reorder level calculations
+    try {
+      await generateAlerts()
+    } catch (error) {
+      console.error('Failed to generate alerts after usage recording:', error)
+      // Don't fail the usage recording if alert generation fails
+    }
+
     revalidatePath('/dashboard')
     revalidatePath('/dashboard/inventory')
     revalidatePath('/dashboard/forecasts')
     revalidatePath('/dashboard/alerts')
-    // Invalidate the forecast cache tag since inventory affects predictions
-    revalidateTag('all-forecasts')
 
     return { success: true }
   } catch (error) {

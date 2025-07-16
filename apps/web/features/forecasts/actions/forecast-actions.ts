@@ -1,7 +1,5 @@
 'use server'
 
-import { unstable_cache } from 'next/cache'
-
 interface DemandForecast {
   date: string
   predicted_demand: number
@@ -25,13 +23,7 @@ interface AllForecastsResponse {
   generated_at: string
 }
 
-// Cache forecasts for 5 minutes (more responsive to inventory changes)
-const getCachedForecasts = unstable_cache(
-  async () => fetchAllForecasts(),
-  ['all-forecasts'],
-  { revalidate: 300, tags: ['all-forecasts'] }
-)
-
+// No caching - always fetch fresh data for real-time accuracy
 async function fetchAllForecasts(): Promise<AllForecastsResponse | null> {
   const ML_SERVICE_URL = process.env.ML_SERVICE_URL || 'https://pharma-inventory-production.up.railway.app'
   const ML_API_KEY = process.env.ML_API_KEY || 'ml-service-dev-key-2025'
@@ -67,11 +59,5 @@ async function fetchAllForecasts(): Promise<AllForecastsResponse | null> {
 }
 
 export async function getAllForecasts(): Promise<AllForecastsResponse | null> {
-  return getCachedForecasts()
-}
-
-export async function refreshForecasts(): Promise<void> {
-  // This will invalidate the cache and fetch fresh data
-  const { revalidatePath } = await import('next/cache')
-  revalidatePath('/forecasts')
+  return fetchAllForecasts()
 }

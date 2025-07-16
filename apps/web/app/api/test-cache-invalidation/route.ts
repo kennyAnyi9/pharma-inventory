@@ -1,69 +1,112 @@
 import { NextResponse } from 'next/server'
-import { revalidatePath, revalidateTag } from 'next/cache'
-import { updateStock } from '@/features/inventory/actions/inventory-actions'
+import { revalidatePath } from 'next/cache'
+import { updateStock, getInventoryStatus } from '@/features/inventory/actions/inventory-actions'
 import { getAllForecasts } from '@/features/forecasts/actions/forecast-actions'
+import { getAlertCounts, getAlerts } from '@/features/alerts/actions/alert-actions'
 
 export async function POST(request: Request) {
   try {
     const { action, drugId, quantity } = await request.json()
     
-    console.log(`🧪 Testing cache invalidation for action: ${action}`)
+    console.log(`🧪 Testing real-time system for action: ${action}`)
     
-    if (action === 'update-stock') {
-      console.log(`📊 Updating stock for drug ${drugId} with quantity ${quantity}`)
+    if (action === 'test-realtime-flow') {
+      console.log(`📊 Testing complete real-time flow for drug ${drugId} with quantity ${quantity}`)
       
-      // 1. Update stock
-      const result = await updateStock({
-        drugId,
-        quantity,
-        notes: 'Cache invalidation test'
+      // 1. Get initial state
+      console.log('📋 Getting initial state...')
+      const initialInventory = await getInventoryStatus()
+      const initialAlerts = await getAlertCounts()
+      const initialForecasts = await getAllForecasts()
+      
+      console.log('Initial state:', {
+        inventory: initialInventory.find(item => item.drugId === drugId),
+        alerts: initialAlerts,
+        forecasts: initialForecasts?.forecasts?.find(f => f.drug_id === drugId)
       })
       
-      console.log('✅ Stock updated, result:', result)
+      // 2. Update stock (this should trigger alerts automatically)
+      console.log('🔄 Updating stock...')
+      const updateResult = await updateStock({
+        drugId,
+        quantity,
+        notes: 'Real-time flow test'
+      })
       
-      // 2. Manually invalidate all related caches
-      console.log('🔄 Invalidating caches...')
+      console.log('✅ Stock updated, result:', updateResult)
       
-      revalidatePath('/dashboard')
-      revalidatePath('/dashboard/inventory')
-      revalidatePath('/dashboard/forecasts')
-      revalidatePath('/dashboard/alerts')
+      // 3. Get new state to verify real-time updates
+      console.log('📋 Getting updated state...')
+      const newInventory = await getInventoryStatus()
+      const newAlerts = await getAlertCounts()
+      const newForecasts = await getAllForecasts()
       
-      // Also try to invalidate the forecast cache tag
-      revalidateTag('all-forecasts')
+      const drugInventory = newInventory.find(item => item.drugId === drugId)
+      const drugForecast = newForecasts?.forecasts?.find(f => f.drug_id === drugId)
       
-      console.log('✅ Cache invalidation complete')
+      console.log('New state:', {
+        inventory: drugInventory,
+        alerts: newAlerts,
+        forecasts: drugForecast
+      })
+      
+      // 4. Verify real-time updates worked
+      const realTimeVerification = {
+        stockUpdated: drugInventory?.currentStock !== initialInventory.find(item => item.drugId === drugId)?.currentStock,
+        alertsUpdated: newAlerts.total !== initialAlerts.total,
+        forecastsUpdated: drugForecast?.current_stock !== initialForecasts?.forecasts?.find(f => f.drug_id === drugId)?.current_stock,
+        stockStatus: drugInventory?.stockStatus,
+        newCurrentStock: drugInventory?.currentStock,
+        alertCount: newAlerts.total
+      }
+      
+      console.log('✅ Real-time verification:', realTimeVerification)
       
       return NextResponse.json({
         success: true,
-        message: 'Stock updated and caches invalidated',
-        data: result
+        message: 'Real-time flow test completed',
+        data: {
+          updateResult,
+          realTimeVerification,
+          drugInventory,
+          drugForecast,
+          alertCounts: newAlerts
+        }
       })
     }
     
-    if (action === 'get-forecasts') {
-      console.log('🔮 Fetching forecasts...')
+    if (action === 'get-current-state') {
+      console.log(`📋 Getting current state for drug ${drugId}`)
       
+      const inventory = await getInventoryStatus()
+      const alerts = await getAlertCounts()
       const forecasts = await getAllForecasts()
+      
+      const drugInventory = inventory.find(item => item.drugId === drugId)
+      const drugForecast = forecasts?.forecasts?.find(f => f.drug_id === drugId)
       
       return NextResponse.json({
         success: true,
-        message: 'Forecasts fetched',
-        data: forecasts
+        message: 'Current state fetched',
+        data: {
+          inventory: drugInventory,
+          alerts,
+          forecasts: drugForecast
+        }
       })
     }
     
     return NextResponse.json({
       success: false,
-      message: 'Invalid action. Use "update-stock" or "get-forecasts"'
+      message: 'Invalid action. Use "test-realtime-flow" or "get-current-state"'
     })
 
   } catch (error) {
-    console.error('❌ Cache invalidation test failed:', error)
+    console.error('❌ Real-time test failed:', error)
     
     return NextResponse.json({
       success: false,
-      message: 'Cache invalidation test failed',
+      message: 'Real-time test failed',
       error: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 })
   }
@@ -71,10 +114,11 @@ export async function POST(request: Request) {
 
 export async function GET() {
   return NextResponse.json({
-    message: 'Cache invalidation test endpoint',
+    message: 'Real-time pharmaceutical inventory test endpoint',
     usage: {
-      'Update stock': 'POST { "action": "update-stock", "drugId": 1, "quantity": 50 }',
-      'Get forecasts': 'POST { "action": "get-forecasts" }'
-    }
+      'Test complete real-time flow': 'POST { "action": "test-realtime-flow", "drugId": 1, "quantity": 50 }',
+      'Get current state': 'POST { "action": "get-current-state", "drugId": 1 }'
+    },
+    description: 'Tests the complete real-time flow: stock update → reorder calculations → alert generation → forecast updates → dashboard refresh'
   })
 }
