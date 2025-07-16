@@ -3,7 +3,7 @@
 import { db } from '@/lib/db'
 import { drugs, inventory } from '@workspace/database'
 import { eq, desc, and, sql } from 'drizzle-orm'
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
 import { z } from 'zod'
 
 // Schema validators
@@ -113,6 +113,10 @@ export async function updateStock(data: z.infer<typeof updateStockSchema>) {
 
     revalidatePath('/dashboard')
     revalidatePath('/dashboard/inventory')
+    revalidatePath('/dashboard/forecasts')
+    revalidatePath('/dashboard/alerts')
+    // Invalidate the forecast cache tag since inventory affects predictions
+    revalidateTag('all-forecasts')
 
     return { success: true }
   } catch (error) {
@@ -181,6 +185,10 @@ export async function recordUsage(data: z.infer<typeof recordUsageSchema>) {
 
     revalidatePath('/dashboard')
     revalidatePath('/dashboard/inventory')
+    revalidatePath('/dashboard/forecasts')
+    revalidatePath('/dashboard/alerts')
+    // Invalidate the forecast cache tag since inventory affects predictions
+    revalidateTag('all-forecasts')
 
     return { success: true }
   } catch (error) {

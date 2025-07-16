@@ -25,11 +25,11 @@ interface AllForecastsResponse {
   generated_at: string
 }
 
-// Cache forecasts for 1 hour
+// Cache forecasts for 5 minutes (more responsive to inventory changes)
 const getCachedForecasts = unstable_cache(
   async () => fetchAllForecasts(),
   ['all-forecasts'],
-  { revalidate: 3600 }
+  { revalidate: 300, tags: ['all-forecasts'] }
 )
 
 async function fetchAllForecasts(): Promise<AllForecastsResponse | null> {
