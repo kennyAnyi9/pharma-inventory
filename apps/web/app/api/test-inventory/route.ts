@@ -43,7 +43,7 @@ export async function GET() {
     console.log(`📦 Found ${inventoryRecords.length} inventory records`)
 
     // Test 3: Try to update stock for first drug
-    const testDrug = drugsData[0]
+    const testDrug = drugsData[0]!
     const testQuantity = 50
     
     console.log(`🔄 Testing stock update for drug: ${testDrug.name}`)
