@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
 import { updateStock } from '@/features/inventory/actions/inventory-actions'
 import { db } from '@/lib/db'
-import { drugs, inventory } from '@workspace/database'
-import { eq, desc, and } from 'drizzle-orm'
+import { inventory } from '@workspace/database'
+import { eq, desc } from 'drizzle-orm'
 
 export async function POST(request: Request) {
   try {

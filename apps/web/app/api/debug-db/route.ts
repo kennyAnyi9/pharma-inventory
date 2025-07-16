@@ -29,8 +29,9 @@ export async function GET() {
     console.log(`Found ${inventoryData.length} inventory records`)
     
     // Test 3: Check specific drug stock
+    let stockInfo = null
     if (drugsData.length > 0) {
-      const testDrug = drugsData[0]
+      const testDrug = drugsData[0]!
       const [currentStock] = await db
         .select({
           closingStock: inventory.closingStock,
@@ -41,6 +42,7 @@ export async function GET() {
         .orderBy(desc(inventory.date))
         .limit(1)
       
+      stockInfo = { drug: testDrug.name, stock: currentStock?.closingStock || 0 }
       console.log(`Current stock for ${testDrug.name}: ${currentStock?.closingStock || 0}`)
     }
     
@@ -58,6 +60,7 @@ export async function GET() {
         inventoryRecords: inventoryData.length,
         drugs: drugsData.map(d => ({ id: d.id, name: d.name })),
         recentInventory: inventoryData.slice(0, 3),
+        stockInfo,
         environment: envCheck
       },
       timestamp: new Date().toISOString()
