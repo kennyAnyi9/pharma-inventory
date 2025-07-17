@@ -35,13 +35,18 @@ interface ReorderComparison {
   }
   currentStock: number
   calculationDetails: {
+    id: number
+    createdAt: Date
+    drugId: number
     calculatedLevel: number
     safetyStock: number
     avgDailyDemand: string
     demandStdDev: string
     leadTimeDays: number
     confidenceLevel: string
-  } | null
+    calculationMethod: string
+    calculationDate: Date
+  } | undefined
   recommendation: 'INCREASE' | 'DECREASE' | 'MAINTAIN' | 'CALCULATE'
 }
 
@@ -153,7 +158,7 @@ export function ReorderLevelDialog({ drugId, drugName, open, onOpenChange }: Reo
             </Card>
 
             {/* ML Calculation */}
-            {comparison.drug.calculatedReorderLevel && comparison.calculationDetails ? (
+            {comparison.drug.calculatedReorderLevel !== null && comparison.calculationDetails ? (
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
