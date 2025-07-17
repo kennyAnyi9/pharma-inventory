@@ -31,6 +31,9 @@ export async function getInventoryStatus() {
         category: drugs.category,
         currentStock: inventory.closingStock,
         reorderLevel: drugs.reorderLevel,
+        calculatedReorderLevel: drugs.calculatedReorderLevel,
+        lastReorderCalculation: drugs.lastReorderCalculation,
+        reorderCalculationConfidence: drugs.reorderCalculationConfidence,
         lastUpdated: inventory.updatedAt,
         supplier: drugs.supplier,
       })
@@ -47,11 +50,21 @@ export async function getInventoryStatus() {
       )
       .orderBy(drugs.name)
 
-    return result.map(item => ({
-      ...item,
-      currentStock: item.currentStock || 0,
-      stockStatus: getStockStatus(item.currentStock || 0, item.reorderLevel),
-    }))
+    return result.map(item => {
+      // Use calculated reorder level if available, otherwise fall back to manual
+      const effectiveReorderLevel = item.calculatedReorderLevel || item.reorderLevel
+      
+      return {
+        ...item,
+        currentStock: item.currentStock || 0,
+        effectiveReorderLevel,
+        stockStatus: getStockStatus(item.currentStock || 0, effectiveReorderLevel),
+        hasCalculatedReorderLevel: !!item.calculatedReorderLevel,
+        reorderLevelVariance: item.calculatedReorderLevel 
+          ? item.calculatedReorderLevel - item.reorderLevel 
+          : null,
+      }
+    })
   } catch (error) {
     console.error('Failed to get inventory status:', error)
     throw new Error(`Failed to fetch inventory status: ${error instanceof Error ? error.message : 'Unknown error'}`)

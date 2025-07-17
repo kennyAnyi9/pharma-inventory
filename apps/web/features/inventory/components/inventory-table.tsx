@@ -14,7 +14,8 @@ import { Input } from '@workspace/ui/components/input'
 import { StockLevelBadge } from './stock-level-badge'
 import { StockUpdateDialog } from './stock-update-dialog'
 import { UsageRecordDialog } from './usage-record-dialog'
-import { Package, Minus, Search, Filter, TrendingUp, TrendingDown, AlertTriangle } from 'lucide-react'
+import { ReorderLevelDialog } from './reorder-level-dialog'
+import { Package, Minus, Search, Filter, TrendingUp, TrendingDown, AlertTriangle, Brain } from 'lucide-react'
 
 interface InventoryItem {
   drugId: number
@@ -23,6 +24,10 @@ interface InventoryItem {
   category: string
   currentStock: number
   reorderLevel: number
+  calculatedReorderLevel: number | null
+  effectiveReorderLevel: number
+  hasCalculatedReorderLevel: boolean
+  reorderLevelVariance: number | null
   stockStatus: 'critical' | 'low' | 'normal' | 'good'
   supplier: string | null
 }
@@ -36,6 +41,7 @@ export function InventoryTable({ data }: InventoryTableProps) {
   const [selectedDrug, setSelectedDrug] = useState<InventoryItem | null>(null)
   const [updateDialogOpen, setUpdateDialogOpen] = useState(false)
   const [usageDialogOpen, setUsageDialogOpen] = useState(false)
+  const [reorderDialogOpen, setReorderDialogOpen] = useState(false)
   const [filterStatus, setFilterStatus] = useState<'all' | 'critical' | 'low' | 'normal' | 'good'>('all')
 
   const filteredData = data.filter(item => {
@@ -55,6 +61,11 @@ export function InventoryTable({ data }: InventoryTableProps) {
   const handleRecordUsage = (drug: InventoryItem) => {
     setSelectedDrug(drug)
     setUsageDialogOpen(true)
+  }
+
+  const handleReorderLevelAnalysis = (drug: InventoryItem) => {
+    setSelectedDrug(drug)
+    setReorderDialogOpen(true)
   }
 
   const getStockIcon = (status: string) => {
@@ -154,9 +165,9 @@ export function InventoryTable({ data }: InventoryTableProps) {
                   <TableHead className="text-heading-sm min-w-[200px]">Drug Name</TableHead>
                   <TableHead className="text-heading-sm min-w-[120px]">Category</TableHead>
                   <TableHead className="text-heading-sm min-w-[140px]">Stock Level</TableHead>
-                  <TableHead className="text-heading-sm min-w-[120px]">Reorder Level</TableHead>
+                  <TableHead className="text-heading-sm min-w-[160px]">Reorder Level</TableHead>
                   <TableHead className="text-heading-sm min-w-[120px]">Supplier</TableHead>
-                  <TableHead className="text-right text-heading-sm min-w-[240px]">Actions</TableHead>
+                  <TableHead className="text-right text-heading-sm min-w-[280px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
             <TableBody>
@@ -193,8 +204,20 @@ export function InventoryTable({ data }: InventoryTableProps) {
                       />
                     </TableCell>
                     <TableCell>
-                      <div className="text-body-md font-medium">
-                        {item.reorderLevel} {item.unit}
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-body-md font-medium">
+                            {item.effectiveReorderLevel} {item.unit}
+                          </span>
+                          {item.hasCalculatedReorderLevel && (
+                            <Brain className="h-3 w-3 text-blue-500" title="ML-optimized" />
+                          )}
+                        </div>
+                        {item.reorderLevelVariance && item.reorderLevelVariance !== 0 && (
+                          <div className="text-xs text-muted-foreground">
+                            {item.reorderLevelVariance > 0 ? '+' : ''}{item.reorderLevelVariance} from manual
+                          </div>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -223,6 +246,16 @@ export function InventoryTable({ data }: InventoryTableProps) {
                           <Minus className="mr-1 h-3 w-3" />
                           <span className="hidden sm:inline">Record Usage</span>
                           <span className="sm:hidden">Use</span>
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleReorderLevelAnalysis(item)}
+                          className="transition-all duration-200 ease-in-out hover:bg-purple/10 hover:border-purple/20 whitespace-nowrap"
+                        >
+                          <Brain className="mr-1 h-3 w-3" />
+                          <span className="hidden sm:inline">ML Analysis</span>
+                          <span className="sm:hidden">ML</span>
                         </Button>
                       </div>
                     </TableCell>
@@ -253,6 +286,12 @@ export function InventoryTable({ data }: InventoryTableProps) {
             drug={selectedDrug}
             open={usageDialogOpen}
             onOpenChange={setUsageDialogOpen}
+          />
+          <ReorderLevelDialog
+            drugId={selectedDrug.drugId}
+            drugName={selectedDrug.drugName}
+            open={reorderDialogOpen}
+            onOpenChange={setReorderDialogOpen}
           />
         </>
       )}

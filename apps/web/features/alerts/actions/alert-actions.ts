@@ -71,7 +71,7 @@ export async function generateAlerts(): Promise<AlertGenerationResult> {
   };
 
   try {
-    // Get current inventory status
+    // Get current inventory status with calculated reorder levels
     const inventoryData = await db
       .select({
         drugId: inventory.drugId,
@@ -79,6 +79,7 @@ export async function generateAlerts(): Promise<AlertGenerationResult> {
         unit: drugs.unit,
         currentStock: inventory.closingStock,
         reorderLevel: drugs.reorderLevel,
+        calculatedReorderLevel: drugs.calculatedReorderLevel,
         reorderQuantity: drugs.reorderQuantity,
         date: inventory.date,
       })
@@ -120,7 +121,10 @@ export async function generateAlerts(): Promise<AlertGenerationResult> {
 }
 
 async function generateLowStockAlert(item: any, result: AlertGenerationResult) {
-  if (item.currentStock <= item.reorderLevel) {
+  // Use calculated reorder level if available, otherwise fall back to manual
+  const effectiveReorderLevel = item.calculatedReorderLevel || item.reorderLevel
+  
+  if (item.currentStock <= effectiveReorderLevel) {
     // Check if this alert already exists
     const existingAlert = await db
       .select()
@@ -139,7 +143,7 @@ async function generateLowStockAlert(item: any, result: AlertGenerationResult) {
       const severity =
         item.currentStock === 0
           ? "critical"
-          : item.currentStock <= item.reorderLevel * 0.5
+          : item.currentStock <= effectiveReorderLevel * 0.5
             ? "high"
             : "medium";
 
@@ -148,8 +152,8 @@ async function generateLowStockAlert(item: any, result: AlertGenerationResult) {
         type: "low_stock",
         severity,
         title: `Low Stock: ${item.drugName}`,
-        message: `Stock level (${item.currentStock} ${item.unit}) is below reorder level (${item.reorderLevel} ${item.unit})`,
-        threshold: item.reorderLevel,
+        message: `Stock level (${item.currentStock} ${item.unit}) is below reorder level (${effectiveReorderLevel} ${item.unit})${item.calculatedReorderLevel ? ' (ML-optimized)' : ''}`,
+        threshold: effectiveReorderLevel,
         currentValue: item.currentStock,
         recommendedAction: `Order ${item.reorderQuantity} ${item.unit} immediately`,
       });
@@ -221,9 +225,10 @@ async function resolveOutdatedAlerts(
       let shouldResolve = false;
 
       // Check if low stock alert should be resolved
+      const effectiveReorderLevel = inventoryItem.calculatedReorderLevel || inventoryItem.reorderLevel
       if (
         alert.type === "low_stock" &&
-        inventoryItem.currentStock > inventoryItem.reorderLevel
+        inventoryItem.currentStock > effectiveReorderLevel
       ) {
         shouldResolve = true;
       }
