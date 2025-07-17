@@ -46,13 +46,13 @@ export interface OrderCardProps {
 }
 
 const statusColors = {
-  draft: "bg-gray-100 text-gray-800",
-  pending: "bg-blue-100 text-blue-800",
-  approved: "bg-green-100 text-green-800",
-  ordered: "bg-purple-100 text-purple-800",
-  delivered: "bg-orange-100 text-orange-800",
-  completed: "bg-emerald-100 text-emerald-800",
-  cancelled: "bg-red-100 text-red-800",
+  draft: "bg-muted/50 text-muted-foreground",
+  pending: "bg-info/15 text-info",
+  approved: "bg-success/15 text-success",
+  ordered: "bg-primary/15 text-primary",
+  delivered: "bg-warning/15 text-warning",
+  completed: "bg-success/20 text-success",
+  cancelled: "bg-critical/15 text-critical",
 };
 
 const statusIcons = {
@@ -113,7 +113,7 @@ export function OrderCard({ order, onUpdate }: OrderCardProps) {
   };
 
   return (
-    <Card className="transition-all duration-200 hover:shadow-md">
+    <Card className="transition-all duration-200 hover:bg-muted/50">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-3">
@@ -130,7 +130,7 @@ export function OrderCard({ order, onUpdate }: OrderCardProps) {
                   {order.orderNumber}
                 </Link>
               </CardTitle>
-              <CardDescription className="text-sm text-gray-600">
+              <CardDescription className="text-sm text-muted-foreground">
                 {order.supplierName} •{" "}
                 {formatDistanceToNow(new Date(order.orderDate), {
                   addSuffix: true,
@@ -155,12 +155,12 @@ export function OrderCard({ order, onUpdate }: OrderCardProps) {
       <CardContent className="space-y-4">
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div className="flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-gray-500" />
+            <Calendar className="w-4 h-4 text-muted-foreground" />
             <span>Order Date: {format(new Date(order.orderDate), "MMM dd, yyyy")}</span>
           </div>
           {order.expectedDeliveryDate && (
             <div className="flex items-center gap-2">
-              <Truck className="w-4 h-4 text-gray-500" />
+              <Truck className="w-4 h-4 text-muted-foreground" />
               <span>
                 Expected: {format(new Date(order.expectedDeliveryDate), "MMM dd, yyyy")}
               </span>
@@ -168,13 +168,13 @@ export function OrderCard({ order, onUpdate }: OrderCardProps) {
           )}
           {order.createdBy && (
             <div className="flex items-center gap-2">
-              <User className="w-4 h-4 text-gray-500" />
+              <User className="w-4 h-4 text-muted-foreground" />
               <span>Created by: {order.createdBy}</span>
             </div>
           )}
           {order.approvedBy && order.approvedAt && (
             <div className="flex items-center gap-2">
-              <CheckCircle className="w-4 h-4 text-green-500" />
+              <CheckCircle className="w-4 h-4 text-success" />
               <span>
                 Approved by {order.approvedBy} on{" "}
                 {format(new Date(order.approvedAt), "MMM dd, yyyy")}
@@ -184,8 +184,8 @@ export function OrderCard({ order, onUpdate }: OrderCardProps) {
         </div>
 
         {order.notes && (
-          <div className="bg-gray-50 p-3 rounded-lg">
-            <p className="text-sm text-gray-700">{order.notes}</p>
+          <div className="bg-muted/50 p-3 rounded-lg border border-border">
+            <p className="text-sm text-muted-foreground">{order.notes}</p>
           </div>
         )}
 
@@ -217,7 +217,7 @@ export function OrderCard({ order, onUpdate }: OrderCardProps) {
         )}
 
         {order.actualDeliveryDate && (
-          <div className="text-sm text-green-600 bg-green-50 p-2 rounded">
+          <div className="text-sm text-success bg-success/10 p-2 rounded border border-success/20">
             Delivered on {format(new Date(order.actualDeliveryDate), "MMM dd, yyyy")}
           </div>
         )}

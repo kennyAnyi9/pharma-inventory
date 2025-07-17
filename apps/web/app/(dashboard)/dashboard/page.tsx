@@ -69,112 +69,163 @@ async function DashboardContent({ searchParams }: DashboardContentProps) {
   ).length
   
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+    <div className="space-y-8">
+      <div className="space-y-2">
+        <h1 className="text-display-md">Dashboard</h1>
+        <p className="text-body-lg text-muted-foreground">
+          Monitor your pharmaceutical inventory system at a glance
+        </p>
+      </div>
       
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
+        <Card className="card-hover">
           <CardContent className="p-6">
-            <div className="text-sm font-medium text-muted-foreground">Total Drugs</div>
-            <div className="text-2xl font-bold">{totalCount}</div>
+            <div className="text-caption uppercase tracking-wide">Total Drugs</div>
+            <div className="text-display-sm text-info">{totalCount}</div>
+            <div className="text-body-sm text-muted-foreground">
+              Registered in system
+            </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="card-hover">
           <CardContent className="p-6">
-            <div className="text-sm font-medium text-muted-foreground">Low Stock</div>
-            <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
+            <div className="text-caption uppercase tracking-wide">Low Stock</div>
+            <div className="text-display-sm text-warning">
               {lowStockCount}
             </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="text-sm font-medium text-muted-foreground">Pending Orders</div>
-            <div className="text-2xl font-bold">
-              {orderStats.pending + orderStats.draft}
+            <div className="text-body-sm text-muted-foreground">
+              Require attention
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="card-hover">
           <CardContent className="p-6">
-            <div className="text-sm font-medium text-muted-foreground">Active Alerts</div>
-            <div className="text-2xl font-bold text-destructive">
+            <div className="text-caption uppercase tracking-wide">Pending Orders</div>
+            <div className="text-display-sm text-info">
+              {orderStats.pending + orderStats.draft}
+            </div>
+            <div className="text-body-sm text-muted-foreground">
+              Awaiting approval
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="card-hover">
+          <CardContent className="p-6">
+            <div className="text-caption uppercase tracking-wide">Active Alerts</div>
+            <div className="text-display-sm text-critical">
               {alertCounts.active}
+            </div>
+            <div className="text-body-sm text-muted-foreground">
+              Need immediate action
             </div>
           </CardContent>
         </Card>
       </div>
       
-      {/* Additional Stats Row */}
+      {/* Detailed Stats Row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">Inventory Status</CardTitle>
+        <Card className="card-hover">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-heading-sm flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full bg-info"></div>
+              Inventory Status
+            </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Critical:</span>
-                <span className="font-medium text-red-600">
+          <CardContent className="space-y-3">
+            <div className="flex justify-between items-center">
+              <span className="text-body-md">Critical</span>
+              <div className="flex items-center gap-2">
+                <div className="h-2 w-2 rounded-full bg-critical"></div>
+                <span className="text-heading-sm text-critical">
                   {inventoryStatus.filter(item => item.stockStatus === 'critical').length}
                 </span>
               </div>
-              <div className="flex justify-between text-sm">
-                <span>Low:</span>
-                <span className="font-medium text-orange-600">
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-body-md">Low Stock</span>
+              <div className="flex items-center gap-2">
+                <div className="h-2 w-2 rounded-full bg-warning"></div>
+                <span className="text-heading-sm text-warning">
                   {inventoryStatus.filter(item => item.stockStatus === 'low').length}
                 </span>
               </div>
-              <div className="flex justify-between text-sm">
-                <span>Normal:</span>
-                <span className="font-medium text-green-600">
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-body-md">Normal</span>
+              <div className="flex items-center gap-2">
+                <div className="h-2 w-2 rounded-full bg-info"></div>
+                <span className="text-heading-sm text-info">
                   {inventoryStatus.filter(item => item.stockStatus === 'normal').length}
                 </span>
               </div>
             </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">Order Status</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Approved:</span>
-                <span className="font-medium">{orderStats.approved}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span>Ordered:</span>
-                <span className="font-medium">{orderStats.ordered}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span>Delivered:</span>
-                <span className="font-medium">{orderStats.delivered}</span>
+            <div className="flex justify-between items-center">
+              <span className="text-body-md">Well Stocked</span>
+              <div className="flex items-center gap-2">
+                <div className="h-2 w-2 rounded-full bg-success"></div>
+                <span className="text-heading-sm text-success">
+                  {inventoryStatus.filter(item => item.stockStatus === 'good').length}
+                </span>
               </div>
             </div>
           </CardContent>
         </Card>
         
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">Alert Breakdown</CardTitle>
+        <Card className="card-hover">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-heading-sm flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full bg-info"></div>
+              Order Status
+            </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Active:</span>
-                <span className="font-medium text-red-600">{alertCounts.active}</span>
+          <CardContent className="space-y-3">
+            <div className="flex justify-between items-center">
+              <span className="text-body-md">Approved</span>
+              <span className="text-heading-sm text-success">{orderStats.approved}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-body-md">Ordered</span>
+              <span className="text-heading-sm text-info">{orderStats.ordered}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-body-md">Delivered</span>
+              <span className="text-heading-sm text-success">{orderStats.delivered}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-body-md">Completed</span>
+              <span className="text-heading-sm text-success">{orderStats.completed}</span>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="card-hover">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-heading-sm flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full bg-critical"></div>
+              Alert Breakdown
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex justify-between items-center">
+              <span className="text-body-md">Active</span>
+              <div className="flex items-center gap-2">
+                <div className="h-2 w-2 rounded-full bg-critical"></div>
+                <span className="text-heading-sm text-critical">{alertCounts.active}</span>
               </div>
-              <div className="flex justify-between text-sm">
-                <span>Acknowledged:</span>
-                <span className="font-medium text-yellow-600">{alertCounts.acknowledged}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-body-md">Acknowledged</span>
+              <div className="flex items-center gap-2">
+                <div className="h-2 w-2 rounded-full bg-warning"></div>
+                <span className="text-heading-sm text-warning">{alertCounts.acknowledged}</span>
               </div>
-              <div className="flex justify-between text-sm">
-                <span>Resolved:</span>
-                <span className="font-medium text-green-600">{alertCounts.resolved}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-body-md">Resolved</span>
+              <div className="flex items-center gap-2">
+                <div className="h-2 w-2 rounded-full bg-success"></div>
+                <span className="text-heading-sm text-success">{alertCounts.resolved}</span>
               </div>
             </div>
           </CardContent>
@@ -182,47 +233,63 @@ async function DashboardContent({ searchParams }: DashboardContentProps) {
       </div>
 
       {/* Drug List Preview */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Drugs in System</CardTitle>
+      <Card className="card-hover">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-heading-lg flex items-center gap-2">
+            <div className="h-2 w-2 rounded-full bg-info"></div>
+            Drugs in System
+          </CardTitle>
+          <p className="text-body-md text-muted-foreground">
+            Quick overview of registered pharmaceutical products
+          </p>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Unit</TableHead>
-                <TableHead>Reorder Level</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {drugRecords.map((drug) => (
-                <TableRow key={drug.id}>
-                  <TableCell className="font-medium">{drug.name}</TableCell>
-                  <TableCell>{drug.category}</TableCell>
-                  <TableCell>{drug.unit}</TableCell>
-                  <TableCell>{drug.reorderLevel}</TableCell>
+          <div className="rounded-lg border">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/50">
+                  <TableHead className="text-heading-sm">Name</TableHead>
+                  <TableHead className="text-heading-sm">Category</TableHead>
+                  <TableHead className="text-heading-sm">Unit</TableHead>
+                  <TableHead className="text-heading-sm">Reorder Level</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {drugRecords.map((drug) => (
+                  <TableRow key={drug.id} className="transition-all duration-200 ease-in-out hover:bg-muted/50">
+                    <TableCell className="py-3">
+                      <div className="text-heading-sm">{drug.name}</div>
+                    </TableCell>
+                    <TableCell className="py-3">
+                      <div className="text-body-md">{drug.category}</div>
+                    </TableCell>
+                    <TableCell className="py-3">
+                      <div className="text-body-md text-muted-foreground">{drug.unit}</div>
+                    </TableCell>
+                    <TableCell className="py-3">
+                      <div className="text-body-md font-medium">{drug.reorderLevel}</div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
           
           {/* Pagination Controls */}
-          <div className="flex items-center justify-between pt-4">
-            <p className="text-sm text-muted-foreground">
+          <div className="flex items-center justify-between pt-6">
+            <p className="text-caption">
               Showing {offset + 1} to {Math.min(offset + limit, totalCount)} of {totalCount} results
             </p>
             <div className="flex gap-2">
               {page > 1 && (
-                <Button variant="outline" size="sm" asChild>
+                <Button variant="outline" size="sm" asChild className="transition-all duration-200 ease-in-out">
                   <Link href={`/dashboard?page=${page - 1}&limit=${limit}`}>
                     Previous
                   </Link>
                 </Button>
               )}
               {page < totalPages && (
-                <Button variant="outline" size="sm" asChild>
+                <Button variant="outline" size="sm" asChild className="transition-all duration-200 ease-in-out">
                   <Link href={`/dashboard?page=${page + 1}&limit=${limit}`}>
                     Next
                   </Link>

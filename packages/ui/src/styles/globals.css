@@ -75,6 +75,12 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+  
+  /* Dark mode pharmaceutical colors */
+  --color-success: oklch(0.65 0.12 142);
+  --color-warning: oklch(0.75 0.13 85);
+  --color-info: oklch(0.65 0.1 220);
+  --color-critical: oklch(0.7 0.18 25);
 }
 
 @theme inline {
@@ -114,6 +120,33 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  
+  /* Typography scale */
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.25rem;
+  --font-size-2xl: 1.5rem;
+  --font-size-3xl: 1.875rem;
+  --font-size-4xl: 2.25rem;
+  
+  /* Line heights */
+  --line-height-tight: 1.25;
+  --line-height-snug: 1.375;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.625;
+  
+  /* Letter spacing */
+  --letter-spacing-tight: -0.025em;
+  --letter-spacing-normal: 0;
+  --letter-spacing-wide: 0.025em;
+  
+  /* Pharmaceutical-specific colors */
+  --color-success: oklch(0.6 0.14 142);
+  --color-warning: oklch(0.7 0.15 85);
+  --color-info: oklch(0.6 0.12 220);
+  --color-critical: oklch(0.6 0.2 25);
 }
 
 @layer base {
@@ -122,5 +155,73 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+  
+  /* Typography utilities */
+  .text-display-lg {
+    @apply text-4xl font-bold leading-tight tracking-tight;
+  }
+  .text-display-md {
+    @apply text-3xl font-bold leading-tight tracking-tight;
+  }
+  .text-display-sm {
+    @apply text-2xl font-bold leading-snug tracking-tight;
+  }
+  .text-heading-lg {
+    @apply text-xl font-semibold leading-snug tracking-tight;
+  }
+  .text-heading-md {
+    @apply text-lg font-semibold leading-snug;
+  }
+  .text-heading-sm {
+    @apply text-base font-semibold leading-snug;
+  }
+  .text-body-lg {
+    @apply text-base leading-normal;
+  }
+  .text-body-md {
+    @apply text-sm leading-normal;
+  }
+  .text-body-sm {
+    @apply text-xs leading-normal;
+  }
+  .text-caption {
+    @apply text-xs leading-tight text-muted-foreground;
+  }
+  
+  /* Pharmaceutical status colors */
+  .text-success {
+    color: var(--color-success);
+  }
+  .text-warning {
+    color: var(--color-warning);
+  }
+  .text-info {
+    color: var(--color-info);
+  }
+  .text-critical {
+    color: var(--color-critical);
+  }
+  .bg-success {
+    background-color: var(--color-success);
+  }
+  .bg-warning {
+    background-color: var(--color-warning);
+  }
+  .bg-info {
+    background-color: var(--color-info);
+  }
+  .bg-critical {
+    background-color: var(--color-critical);
+  }
+  
+  /* Card hover effects */
+  .card-hover {
+    @apply transition-all duration-200 ease-in-out hover:scale-[1.02];
+  }
+  
+  /* Focus styles */
+  .focus-visible:focus-visible {
+    @apply outline-2 outline-offset-2 outline-ring;
   }
 }

@@ -32,10 +32,10 @@ export interface AlertNotificationProps {
 }
 
 const severityColors = {
-  low: "bg-blue-500",
-  medium: "bg-yellow-500",
-  high: "bg-orange-500",
-  critical: "bg-red-500",
+  low: "bg-info",
+  medium: "bg-warning",
+  high: "bg-warning",
+  critical: "bg-critical",
 };
 
 export function AlertNotification({
@@ -65,7 +65,7 @@ export function AlertNotification({
         </Button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent align="end" className="w-80">
+      <DropdownMenuContent align="end" className="w-80 max-w-[calc(100vw-2rem)]">
         <DropdownMenuLabel className="flex items-center justify-between">
           <span>Notifications</span>
           {unreadCount > 0 && (
@@ -79,8 +79,8 @@ export function AlertNotification({
 
         <ScrollArea className="h-96">
           {alerts.length === 0 ? (
-            <div className="p-4 text-center text-gray-500">
-              <Bell className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+            <div className="p-4 text-center text-muted-foreground">
+              <Bell className="w-8 h-8 mx-auto mb-2 text-muted-foreground/50" />
               <p>No alerts</p>
             </div>
           ) : (
@@ -88,7 +88,7 @@ export function AlertNotification({
               <DropdownMenuItem
                 key={alert.id}
                 className={`flex-col items-start p-3 cursor-pointer ${
-                  !alert.isRead ? "bg-blue-50" : ""
+                  !alert.isRead ? "bg-info/10" : ""
                 }`}
                 asChild
               >
@@ -106,10 +106,10 @@ export function AlertNotification({
                         <p className="font-medium text-sm truncate">
                           {alert.title}
                         </p>
-                        <p className="text-xs text-gray-600 truncate">
+                        <p className="text-xs text-muted-foreground truncate">
                           {alert.drugName}
                         </p>
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-muted-foreground/80 mt-1">
                           {formatDistanceToNow(new Date(alert.createdAt), {
                             addSuffix: true,
                           })}
@@ -138,7 +138,7 @@ export function AlertNotification({
           <>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <Link href="/dashboard/alerts" className="w-full text-center">
+              <Link href="/alerts" className="w-full text-center">
                 View all alerts
               </Link>
             </DropdownMenuItem>

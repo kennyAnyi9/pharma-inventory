@@ -43,17 +43,17 @@ export interface AlertCardProps {
 }
 
 const severityColors = {
-  low: "bg-blue-100 text-blue-800 border-blue-200",
-  medium: "bg-yellow-100 text-yellow-800 border-yellow-200",
-  high: "bg-orange-100 text-orange-800 border-orange-200",
-  critical: "bg-red-100 text-red-800 border-red-200",
+  low: "bg-info/15 text-info border-info/20",
+  medium: "bg-warning/15 text-warning border-warning/20",
+  high: "bg-warning/20 text-warning border-warning/25",
+  critical: "bg-critical/15 text-critical border-critical/20",
 };
 
 const statusColors = {
-  active: "bg-red-100 text-red-800",
-  acknowledged: "bg-yellow-100 text-yellow-800",
-  resolved: "bg-green-100 text-green-800",
-  dismissed: "bg-gray-100 text-gray-800",
+  active: "bg-critical/15 text-critical border-critical/20",
+  acknowledged: "bg-warning/15 text-warning border-warning/20",
+  resolved: "bg-success/15 text-success border-success/20",
+  dismissed: "bg-muted text-muted-foreground border-border",
 };
 
 const typeIcons = {
@@ -100,7 +100,7 @@ export function AlertCard({ alert, onUpdate }: AlertCardProps) {
 
   return (
     <Card
-      className={`transition-all duration-200 hover:shadow-md ${
+      className={`transition-all duration-200 hover:bg-muted/50 ${
         !alert.isRead ? "border-l-4 border-l-blue-500" : ""
       }`}
       onClick={handleMarkAsRead}
@@ -115,7 +115,7 @@ export function AlertCard({ alert, onUpdate }: AlertCardProps) {
             </div>
             <div>
               <CardTitle className="text-lg">{alert.title}</CardTitle>
-              <CardDescription className="text-sm text-gray-600">
+              <CardDescription className="text-body-md text-muted-foreground">
                 {alert.drugName} •{" "}
                 {formatDistanceToNow(new Date(alert.createdAt), {
                   addSuffix: true,
@@ -145,10 +145,10 @@ export function AlertCard({ alert, onUpdate }: AlertCardProps) {
       </CardHeader>
 
       <CardContent className="space-y-4">
-        <p className="text-sm text-gray-700">{alert.message}</p>
+        <p className="text-body-md text-foreground">{alert.message}</p>
 
         {alert.threshold && alert.currentValue !== null && (
-          <div className="flex justify-between text-sm bg-gray-50 p-3 rounded-lg">
+          <div className="flex justify-between text-body-md bg-muted p-3 rounded-lg">
             <span>
               Current Value: <strong>{alert.currentValue}</strong>
             </span>
@@ -159,11 +159,11 @@ export function AlertCard({ alert, onUpdate }: AlertCardProps) {
         )}
 
         {alert.recommendedAction && (
-          <div className="bg-blue-50 p-3 rounded-lg">
-            <p className="text-sm font-medium text-blue-800 mb-1">
+          <div className="bg-info/10 p-3 rounded-lg border border-info/20">
+            <p className="text-sm font-medium text-info mb-1">
               Recommended Action:
             </p>
-            <p className="text-sm text-blue-700">{alert.recommendedAction}</p>
+            <p className="text-sm text-info/80">{alert.recommendedAction}</p>
           </div>
         )}
 
@@ -192,7 +192,7 @@ export function AlertCard({ alert, onUpdate }: AlertCardProps) {
         )}
 
         {alert.status === "acknowledged" && alert.acknowledgedAt && (
-          <div className="text-sm text-gray-500 bg-gray-50 p-2 rounded">
+          <div className="text-body-md text-muted-foreground bg-muted p-2 rounded">
             Acknowledged{" "}
             {formatDistanceToNow(new Date(alert.acknowledgedAt), {
               addSuffix: true,
@@ -202,7 +202,7 @@ export function AlertCard({ alert, onUpdate }: AlertCardProps) {
         )}
 
         {alert.status === "resolved" && alert.resolvedAt && (
-          <div className="text-sm text-green-600 bg-green-50 p-2 rounded">
+          <div className="text-sm text-success bg-success/10 p-2 rounded border border-success/20">
             Resolved{" "}
             {formatDistanceToNow(new Date(alert.resolvedAt), {
               addSuffix: true,

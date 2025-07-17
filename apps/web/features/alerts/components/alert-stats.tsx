@@ -48,8 +48,8 @@ export function AlertStats({ stats }: AlertStatsProps) {
       label: "Total",
       value: stats.total,
       icon: XCircle,
-      color: "text-gray-600",
-      bgColor: "bg-gray-50",
+      color: "text-muted-foreground",
+      bgColor: "bg-muted",
       description: "All time alerts",
     },
   ];
@@ -70,7 +70,7 @@ export function AlertStats({ stats }: AlertStatsProps) {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{item.value}</div>
-              <CardDescription className="text-xs text-gray-500">
+              <CardDescription className="text-caption text-muted-foreground">
                 {item.description}
               </CardDescription>
             </CardContent>

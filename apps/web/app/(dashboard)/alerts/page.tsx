@@ -45,8 +45,8 @@ export default async function AlertsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Alerts</h1>
-          <p className="text-gray-600">
+          <h1 className="text-display-md">Alerts</h1>
+          <p className="text-body-lg text-muted-foreground">
             Monitor and manage inventory alerts and notifications
           </p>
         </div>
@@ -116,9 +116,9 @@ function AlertsList({
   if (alerts.length === 0) {
     return (
       <div className="text-center py-12">
-        <AlertTriangle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-lg font-semibold text-gray-600">{emptyMessage}</h3>
-        <p className="text-gray-500">Check back later or generate new alerts</p>
+        <AlertTriangle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+        <h3 className="text-heading-md text-foreground">{emptyMessage}</h3>
+        <p className="text-body-md text-muted-foreground">Check back later or generate new alerts</p>
       </div>
     );
   }
