@@ -6,6 +6,27 @@ import { eq, desc, and, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 
+// Zod schemas for ML API response validation
+const MLForecastSchema = z.object({
+  drug_id: z.number(),
+  drug_name: z.string(),
+  unit: z.string(),
+  current_stock: z.number(),
+  forecasts: z.array(z.object({
+    date: z.string(),
+    predicted_demand: z.number(),
+    day_of_week: z.string()
+  })),
+  total_predicted_7_days: z.number()
+})
+
+const MLServiceResponseSchema = z.object({
+  forecasts: z.array(MLForecastSchema)
+})
+
+// Input validation schema
+const DrugIdSchema = z.number().positive().int()
+
 // Types
 interface ReorderCalculationData {
   drugId: number
@@ -33,8 +54,12 @@ interface MLForecastData {
 // Get ML predictions for all drugs
 async function getMLPredictions(): Promise<MLForecastData[] | null> {
   try {
-    const ML_SERVICE_URL = process.env.ML_SERVICE_URL || 'https://pharma-inventory-production.up.railway.app'
-    const ML_API_KEY = process.env.ML_API_KEY || 'ml-service-dev-key-2025'
+    const ML_SERVICE_URL = process.env.ML_SERVICE_URL
+    const ML_API_KEY = process.env.ML_API_KEY
+
+    if (!ML_SERVICE_URL || !ML_API_KEY) {
+      throw new Error('ML_SERVICE_URL and ML_API_KEY environment variables must be set')
+    }
 
     const response = await fetch(`${ML_SERVICE_URL}/forecast/all`, {
       method: 'POST',
@@ -52,7 +77,16 @@ async function getMLPredictions(): Promise<MLForecastData[] | null> {
     }
 
     const data = await response.json()
-    return data.forecasts
+    
+    // Validate the response structure
+    try {
+      const validatedData = MLServiceResponseSchema.parse(data)
+      return validatedData.forecasts
+    } catch (validationError) {
+      console.error('ML service response validation failed:', validationError)
+      console.error('Invalid response data:', data)
+      return null
+    }
   } catch (error) {
     console.error('Failed to fetch ML predictions:', error)
     return null
@@ -143,32 +177,36 @@ export async function calculateAllReorderLevels() {
       })
     }
 
-    // Save calculations to audit table
+    // Save calculations and update drugs in a single transaction
     if (calculations.length > 0) {
-      await db.insert(reorderCalculations).values(
-        calculations.map(calc => ({
-          drugId: calc.drugId,
-          calculatedLevel: calc.calculatedLevel,
-          safetyStock: calc.safetyStock,
-          avgDailyDemand: calc.avgDailyDemand.toString(),
-          demandStdDev: calc.demandStdDev.toString(),
-          leadTimeDays: calc.leadTimeDays,
-          confidenceLevel: calc.confidenceLevel.toString(),
-        }))
-      )
+      await db.transaction(async (tx) => {
+        // Insert calculations to audit table
+        await tx.insert(reorderCalculations).values(
+          calculations.map(calc => ({
+            drugId: calc.drugId,
+            calculatedLevel: calc.calculatedLevel,
+            safetyStock: calc.safetyStock,
+            avgDailyDemand: calc.avgDailyDemand.toString(),
+            demandStdDev: calc.demandStdDev.toString(),
+            leadTimeDays: calc.leadTimeDays,
+            confidenceLevel: calc.confidenceLevel.toString(),
+          }))
+        )
 
-      // Update drugs table with calculated reorder levels
-      for (const update of updates) {
-        await db
-          .update(drugs)
-          .set({
-            calculatedReorderLevel: update.calculatedLevel,
-            reorderCalculationConfidence: update.confidence.toString(),
-            lastReorderCalculation: new Date(),
-            updatedAt: new Date(),
-          })
-          .where(eq(drugs.id, update.drugId))
-      }
+        // Batch update drugs table with calculated reorder levels
+        const updatePromises = updates.map(update => 
+          tx.update(drugs)
+            .set({
+              calculatedReorderLevel: update.calculatedLevel,
+              reorderCalculationConfidence: update.confidence.toString(),
+              lastReorderCalculation: new Date(),
+              updatedAt: new Date(),
+            })
+            .where(eq(drugs.id, update.drugId))
+        )
+        
+        await Promise.all(updatePromises)
+      })
     }
 
     // Revalidate relevant pages
@@ -238,11 +276,11 @@ export async function getReorderLevelComparison(drugId: number) {
       calculationDetails: latestCalculation,
       recommendation: drugData.calculatedReorderLevel
         ? drugData.calculatedReorderLevel > drugData.currentReorderLevel
-          ? 'INCREASE'
+          ? 'INCREASE' as const
           : drugData.calculatedReorderLevel < drugData.currentReorderLevel
-          ? 'DECREASE'
-          : 'MAINTAIN'
-        : 'CALCULATE'
+          ? 'DECREASE' as const
+          : 'MAINTAIN' as const
+        : 'CALCULATE' as const
     }
   } catch (error) {
     console.error('Failed to get reorder level comparison:', error)
@@ -252,6 +290,13 @@ export async function getReorderLevelComparison(drugId: number) {
 
 // Accept calculated reorder level (update manual reorder level)
 export async function acceptCalculatedReorderLevel(drugId: number) {
+  // Validate input
+  try {
+    DrugIdSchema.parse(drugId)
+  } catch (validationError) {
+    throw new Error(`Invalid drugId: ${validationError instanceof Error ? validationError.message : 'Invalid input'}`)
+  }
+
   try {
     const [drugData] = await db
       .select({

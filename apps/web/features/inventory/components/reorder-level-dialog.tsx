@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useToast } from '@workspace/ui/hooks/use-toast'
 import {
   Dialog,
@@ -56,7 +56,7 @@ export function ReorderLevelDialog({ drugId, drugName, open, onOpenChange }: Reo
   const [isAccepting, setIsAccepting] = useState(false)
   const { toast } = useToast()
 
-  const fetchComparison = async () => {
+  const fetchComparison = useCallback(async () => {
     if (!open) return
     
     setIsLoading(true)
@@ -72,7 +72,7 @@ export function ReorderLevelDialog({ drugId, drugName, open, onOpenChange }: Reo
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [open, drugId, toast])
 
   const handleAcceptCalculation = async () => {
     setIsAccepting(true)
@@ -97,7 +97,7 @@ export function ReorderLevelDialog({ drugId, drugName, open, onOpenChange }: Reo
   // Fetch data when dialog opens
   React.useEffect(() => {
     fetchComparison()
-  }, [open])
+  }, [open, drugId, fetchComparison])
 
   const getRecommendationColor = (recommendation: string) => {
     switch (recommendation) {
