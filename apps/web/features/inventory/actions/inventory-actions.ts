@@ -51,15 +51,17 @@ export async function getInventoryStatus() {
       .orderBy(drugs.name)
 
     return result.map(item => {
-      // Use calculated reorder level if available, otherwise fall back to manual
-      const effectiveReorderLevel = item.calculatedReorderLevel || item.reorderLevel
+      // Prioritize ML-calculated reorder level, fallback to manual only if ML hasn't run yet
+      const effectiveReorderLevel = item.calculatedReorderLevel || item.reorderLevel || 100
+      const usingMLLevel = !!item.calculatedReorderLevel
       
       return {
         ...item,
         currentStock: item.currentStock || 0,
         effectiveReorderLevel,
         stockStatus: getStockStatus(item.currentStock || 0, effectiveReorderLevel),
-        hasCalculatedReorderLevel: !!item.calculatedReorderLevel,
+        hasCalculatedReorderLevel: usingMLLevel,
+        usingMLLevel,
         reorderLevelVariance: item.calculatedReorderLevel 
           ? item.calculatedReorderLevel - item.reorderLevel 
           : null,

@@ -121,8 +121,8 @@ export async function generateAlerts(): Promise<AlertGenerationResult> {
 }
 
 async function generateLowStockAlert(item: any, result: AlertGenerationResult) {
-  // Use calculated reorder level if available, otherwise fall back to manual
-  const effectiveReorderLevel = item.calculatedReorderLevel || item.reorderLevel
+  // Prioritize ML-calculated reorder level, fallback to manual only if ML hasn't run yet
+  const effectiveReorderLevel = item.calculatedReorderLevel || item.reorderLevel || 100
   
   if (item.currentStock <= effectiveReorderLevel) {
     // Check if this alert already exists
@@ -225,7 +225,7 @@ async function resolveOutdatedAlerts(
       let shouldResolve = false;
 
       // Check if low stock alert should be resolved
-      const effectiveReorderLevel = inventoryItem.calculatedReorderLevel || inventoryItem.reorderLevel
+      const effectiveReorderLevel = inventoryItem.calculatedReorderLevel || inventoryItem.reorderLevel || 100
       if (
         alert.type === "low_stock" &&
         inventoryItem.currentStock > effectiveReorderLevel
