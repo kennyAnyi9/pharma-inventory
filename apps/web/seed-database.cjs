@@ -272,40 +272,43 @@ async function seedDrugs() {
 async function seedInventory() {
   console.log('🌱 Seeding inventory data...');
   
-  // Get all drugs using Drizzle ORM
-  const drugResults = await db.select().from(drugs);
-  
-  // Create inventory entries for the last 30 days
-  const today = new Date();
-  const inventoryData = [];
-  
-  for (const drug of drugResults) {
-    for (let i = 0; i < 30; i++) {
-      const date = new Date(today);
-      date.setDate(date.getDate() - i);
-      
-      // Generate realistic inventory data
-      const baseStock = Math.floor(Math.random() * 500) + 100;
-      const received = i % 7 === 0 ? Math.floor(Math.random() * 200) + 50 : 0; // Delivery every 7 days
-      const dispensed = Math.floor(Math.random() * 50) + 10;
-      const openingStock = i === 29 ? baseStock : baseStock + received;
-      const closingStock = Math.max(0, openingStock + received - dispensed);
-      
-      inventoryData.push({
-        drugId: drug.id,
-        date: date.toISOString().split('T')[0],
-        openingStock,
-        received,
-        dispensed,
-        closingStock
-      });
+  // Wrap in transaction for atomicity
+  await db.transaction(async (tx) => {
+    // Get all drugs using Drizzle ORM
+    const drugResults = await tx.select().from(drugs);
+    
+    // Create inventory entries for the last 30 days
+    const today = new Date();
+    const inventoryData = [];
+    
+    for (const drug of drugResults) {
+      for (let i = 0; i < 30; i++) {
+        const date = new Date(today);
+        date.setDate(date.getDate() - i);
+        
+        // Generate realistic inventory data
+        const baseStock = Math.floor(Math.random() * 500) + 100;
+        const quantityReceived = i % 7 === 0 ? Math.floor(Math.random() * 200) + 50 : 0; // Delivery every 7 days
+        const quantityUsed = Math.floor(Math.random() * 50) + 10;
+        const openingStock = i === 29 ? baseStock : baseStock + quantityReceived;
+        const closingStock = Math.max(0, openingStock + quantityReceived - quantityUsed);
+        
+        inventoryData.push({
+          drugId: drug.id,
+          date: date.toISOString().split('T')[0],
+          openingStock,
+          quantityReceived,
+          quantityUsed,
+          closingStock
+        });
+      }
+      console.log(`✓ Generated inventory data for: ${drug.name}`);
     }
-    console.log(`✓ Generated inventory data for: ${drug.name}`);
-  }
-  
-  // Insert inventory data using Drizzle ORM
-  await db.insert(inventory).values(inventoryData);
-  console.log(`✅ Added ${inventoryData.length} inventory records`);
+    
+    // Insert inventory data using Drizzle ORM
+    await tx.insert(inventory).values(inventoryData);
+    console.log(`✅ Added ${inventoryData.length} inventory records`);
+  });
 }
 
 async function seedDatabase() {
