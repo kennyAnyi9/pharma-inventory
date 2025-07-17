@@ -14,7 +14,7 @@ import { Badge } from '@workspace/ui/components/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@workspace/ui/components/card'
 import { getReorderLevelComparison, acceptCalculatedReorderLevel } from '../actions/reorder-actions'
 import { Brain, Package, TrendingUp, TrendingDown, CheckCircle, AlertTriangle } from 'lucide-react'
-import React
+import React from 'react'
 
 interface ReorderLevelDialogProps {
   drugId: number
