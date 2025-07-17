@@ -1,5 +1,6 @@
 import { getInventoryStatus } from "@/features/inventory/actions/inventory-actions";
 import { InventoryTable } from "@/features/inventory/components/inventory-table";
+import { ReorderCalculationTrigger } from "@/features/inventory/components/reorder-calculation-trigger";
 import {
   Card,
   CardContent,
@@ -90,6 +91,8 @@ export default async function InventoryPage() {
           </CardContent>
         </Card>
       </div>
+
+      <ReorderCalculationTrigger />
 
       <Card>
         <CardHeader>

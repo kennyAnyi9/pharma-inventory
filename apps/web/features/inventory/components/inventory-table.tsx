@@ -25,8 +25,10 @@ interface InventoryItem {
   currentStock: number
   reorderLevel: number
   calculatedReorderLevel: number | null
+  lastReorderCalculation: Date | null
   effectiveReorderLevel: number
   hasCalculatedReorderLevel: boolean
+  usingMLLevel: boolean
   reorderLevelVariance: number | null
   stockStatus: 'critical' | 'low' | 'normal' | 'good'
   supplier: string | null
@@ -209,15 +211,24 @@ export function InventoryTable({ data }: InventoryTableProps) {
                           <span className="text-body-md font-medium">
                             {item.effectiveReorderLevel} {item.unit}
                           </span>
-                          {item.hasCalculatedReorderLevel && (
-                            <div title="ML-optimized">
+                          {item.hasCalculatedReorderLevel ? (
+                            <div title="ML-optimized reorder level">
                               <Brain className="h-3 w-3 text-blue-500" />
+                            </div>
+                          ) : (
+                            <div title="Default reorder level - ML calculation pending">
+                              <AlertTriangle className="h-3 w-3 text-yellow-500" />
                             </div>
                           )}
                         </div>
-                        {item.reorderLevelVariance && item.reorderLevelVariance !== 0 && (
+                        {!item.hasCalculatedReorderLevel && (
                           <div className="text-xs text-muted-foreground">
-                            {item.reorderLevelVariance > 0 ? '+' : ''}{item.reorderLevelVariance} from manual
+                            Default level - Run ML calculation
+                          </div>
+                        )}
+                        {item.lastReorderCalculation && (
+                          <div className="text-xs text-muted-foreground">
+                            Updated: {new Date(item.lastReorderCalculation).toLocaleDateString()}
                           </div>
                         )}
                       </div>
@@ -248,16 +259,6 @@ export function InventoryTable({ data }: InventoryTableProps) {
                           <Minus className="mr-1 h-3 w-3" />
                           <span className="hidden sm:inline">Record Usage</span>
                           <span className="sm:hidden">Use</span>
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleReorderLevelAnalysis(item)}
-                          className="transition-all duration-200 ease-in-out hover:bg-purple/10 hover:border-purple/20 whitespace-nowrap"
-                        >
-                          <Brain className="mr-1 h-3 w-3" />
-                          <span className="hidden sm:inline">ML Analysis</span>
-                          <span className="sm:hidden">ML</span>
                         </Button>
                       </div>
                     </TableCell>

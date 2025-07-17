@@ -5,6 +5,7 @@ import { drugs } from '@workspace/database'
 import { getInventoryStatus } from '@/features/inventory/actions/inventory-actions'
 import { getAlertCounts } from '@/features/alerts/actions/alert-actions'
 import { getOrderStats } from '@/features/orders/actions/order-actions'
+import { getLatestReorderCalculationStatus } from '@/features/inventory/actions/reorder-actions'
 import { Card, CardContent, CardHeader, CardTitle } from '@workspace/ui/components/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@workspace/ui/components/table'
 import { Button } from '@workspace/ui/components/button'
@@ -52,12 +53,13 @@ async function DashboardContent({ searchParams }: DashboardContentProps) {
   const offset = (page - 1) * limit
   
   // Fetch all data in parallel
-  const [drugRecords, totalDrugs, inventoryStatus, alertCounts, orderStats] = await Promise.all([
+  const [drugRecords, totalDrugs, inventoryStatus, alertCounts, orderStats, reorderStatus] = await Promise.all([
     db.select().from(drugs).limit(limit).offset(offset),
     db.select().from(drugs),
     getInventoryStatus().catch(() => []),
     getAlertCounts().catch(() => ({ active: 0, acknowledged: 0, resolved: 0, total: 0 })),
-    getOrderStats().catch(() => ({ draft: 0, pending: 0, approved: 0, ordered: 0, delivered: 0, completed: 0, total: 0 }))
+    getOrderStats().catch(() => ({ draft: 0, pending: 0, approved: 0, ordered: 0, delivered: 0, completed: 0, total: 0 })),
+    getLatestReorderCalculationStatus().catch(() => ({ lastCalculationDate: null, totalDrugsWithCalculations: 0, totalDrugs: 0, recentCalculationsCount: 0, calculationCoverage: 0 }))
   ])
   
   const totalCount = totalDrugs.length
@@ -124,7 +126,7 @@ async function DashboardContent({ searchParams }: DashboardContentProps) {
       </div>
       
       {/* Detailed Stats Row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card className="card-hover">
           <CardHeader className="pb-3">
             <CardTitle className="text-heading-sm flex items-center gap-2">
@@ -227,6 +229,38 @@ async function DashboardContent({ searchParams }: DashboardContentProps) {
                 <div className="h-2 w-2 rounded-full bg-success"></div>
                 <span className="text-heading-sm text-success">{alertCounts.resolved}</span>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="card-hover">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-heading-sm flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full bg-info"></div>
+              ML Reorder Calculations
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex justify-between items-center">
+              <span className="text-body-md">Coverage</span>
+              <span className="text-heading-sm text-info">{reorderStatus.calculationCoverage}%</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-body-md">Calculated</span>
+              <span className="text-heading-sm text-success">{reorderStatus.totalDrugsWithCalculations}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-body-md">Recent (24h)</span>
+              <span className="text-heading-sm text-info">{reorderStatus.recentCalculationsCount}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-body-md">Last Run</span>
+              <span className="text-heading-sm text-muted-foreground">
+                {reorderStatus.lastCalculationDate 
+                  ? new Date(reorderStatus.lastCalculationDate).toLocaleDateString()
+                  : 'Never'
+                }
+              </span>
             </div>
           </CardContent>
         </Card>
