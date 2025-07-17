@@ -210,7 +210,9 @@ export function InventoryTable({ data }: InventoryTableProps) {
                             {item.effectiveReorderLevel} {item.unit}
                           </span>
                           {item.hasCalculatedReorderLevel && (
-                            <Brain className="h-3 w-3 text-blue-500" title="ML-optimized" />
+                            <div title="ML-optimized">
+                              <Brain className="h-3 w-3 text-blue-500" />
+                            </div>
                           )}
                         </div>
                         {item.reorderLevelVariance && item.reorderLevelVariance !== 0 && (
