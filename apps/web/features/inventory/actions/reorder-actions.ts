@@ -54,8 +54,18 @@ interface MLForecastData {
 // Get ML predictions for all drugs
 async function getMLPredictions(): Promise<MLForecastData[] | null> {
   try {
-    const ML_SERVICE_URL = process.env.ML_SERVICE_URL || 'https://pharma-inventory-production.up.railway.app'
-    const ML_API_KEY = process.env.ML_API_KEY || 'ml-service-dev-key-2025'
+    const ML_SERVICE_URL = process.env.ML_SERVICE_URL
+    const ML_API_KEY = process.env.ML_API_KEY
+
+    if (!ML_SERVICE_URL) {
+      console.error('ML_SERVICE_URL environment variable is not set')
+      throw new Error('ML service configuration missing: ML_SERVICE_URL must be set')
+    }
+
+    if (!ML_API_KEY) {
+      console.error('ML_API_KEY environment variable is not set')
+      throw new Error('ML service configuration missing: ML_API_KEY must be set')
+    }
 
     const response = await fetch(`${ML_SERVICE_URL}/forecast/all`, {
       method: 'POST',
