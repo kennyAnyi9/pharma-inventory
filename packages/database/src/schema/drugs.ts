@@ -15,7 +15,7 @@ export const drugs = pgTable('drugs', {
   requiresPrescription: boolean('requires_prescription').notNull().default(false),
   storageCondition: varchar('storage_condition', { length: 100 }), // e.g., "Cool & Dry", "Refrigerated"
   lastReorderCalculation: timestamp('last_reorder_calculation'),
-  reorderCalculationConfidence: decimal('reorder_calculation_confidence', { precision: 3, scale: 2 }),
+  reorderCalculationConfidence: decimal('reorder_calculation_confidence', { precision: 2, scale: 2 }),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 })
