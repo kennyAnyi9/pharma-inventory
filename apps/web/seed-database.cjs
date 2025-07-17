@@ -1,4 +1,5 @@
-const { createDatabaseClient, drugs, suppliers, inventory } = require('../../packages/database/src/index.ts');
+- const { createDatabaseClient, drugs, suppliers, inventory } = require('../../packages/database/src/index.ts');
++ const { createDatabaseClient, drugs, suppliers, inventory } = require('../../packages/database/src/index');
 require('dotenv').config({ path: '.env.local' });
 
 // Initialize database client using the shared Drizzle client
