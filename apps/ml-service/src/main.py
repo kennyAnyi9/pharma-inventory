@@ -1,11 +1,12 @@
-from fastapi import FastAPI, HTTPException, Depends, Security
-from fastapi.security import APIKeyHeader
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import List, Optional
-from datetime import datetime
 import os
+from datetime import datetime
+from typing import List, Optional
+
 from dotenv import load_dotenv
+from fastapi import Depends, FastAPI, HTTPException, Security
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import APIKeyHeader
+from pydantic import BaseModel
 
 # Load environment variables
 load_dotenv()
@@ -29,7 +30,7 @@ app = FastAPI(
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "https://*.vercel.app"],
+    allow_origins=["http://localhost:3000", "https://*.vercel.app","https://*.kennyanyi.xyz"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -117,16 +118,16 @@ def forecast_all_drugs(
     request: Optional[ForecastRequest] = None,
     api_key: str = Depends(verify_api_key)
 ):
-    """Get demand forecast for all drugs - OPTIMIZED"""
+    """Get adaptive demand forecast for all drugs - REAL-TIME LEARNING"""
     if request is None:
         request = ForecastRequest()
         
     service = get_prediction_service()
     
     try:
-        # Use the new optimized method
+        # Use the new adaptive method that learns from recent usage
         days = request.days if request.days is not None else 7
-        all_predictions = service.predict_all_drugs(days)
+        all_predictions = service.predict_all_drugs_adaptive(days)
         all_forecasts = []
         
         for drug_id, data in all_predictions.items():
@@ -173,9 +174,9 @@ def forecast_drug(
         raise HTTPException(status_code=404, detail=f"No model found for drug_id {drug_id}")
     
     try:
-        # Get predictions
+        # Get adaptive predictions that learn from recent usage
         days = request.days if request.days is not None else 7
-        predictions = service.predict_demand(drug_id, days)
+        predictions = service.get_adaptive_predictions(drug_id, days)
         
         # Get current stock
         current_stock = service.get_current_stock(drug_id)
@@ -210,11 +211,87 @@ def forecast_drug(
 
 @app.post("/train")
 def trigger_training(api_key: str = Depends(verify_api_key)):
-    """Trigger model retraining (placeholder)"""
-    return {
-        "message": "Training endpoint not implemented yet",
-        "note": "Run python src/models/train.py manually for now"
-    }
+    """Trigger XGBoost model retraining with latest data"""
+    try:
+        service = get_prediction_service()
+        
+        # Import training functions
+        from models.train import retrain_models_with_recent_data
+        
+        # Trigger retraining
+        training_results = retrain_models_with_recent_data()
+        
+        # Reload models in the service
+        service.load_models()
+        
+        return {
+            "message": "Model retraining completed successfully",
+            "training_results": training_results,
+            "models_reloaded": len(service.models),
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except ImportError:
+        return {
+            "message": "Training module not found",
+            "note": "Please implement retrain_models_with_recent_data() in models/train.py",
+            "status": "error"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Training failed: {str(e)}")
+
+@app.post("/forecast/adaptive/{drug_id}")
+def forecast_drug_with_details(
+    drug_id: int,
+    request: Optional[ForecastRequest] = None,
+    api_key: str = Depends(verify_api_key)
+):
+    """Get detailed adaptive predictions showing adjustment factors"""
+    if request is None:
+        request = ForecastRequest()
+        
+    service = get_prediction_service()
+    
+    # Validate drug_id
+    if drug_id not in service.models:
+        raise HTTPException(status_code=404, detail=f"No model found for drug_id {drug_id}")
+    
+    try:
+        # Get detailed adaptive predictions
+        days = request.days if request.days is not None else 7
+        predictions = service.get_adaptive_predictions(drug_id, days)
+        
+        # Get current stock
+        current_stock = service.get_current_stock(drug_id)
+        
+        # Get drug info
+        drug_info = service.drug_info.get(drug_id, {
+            'name': 'Unknown',
+            'unit': 'units',
+            'reorder_level': 50
+        })
+        
+        # Calculate trend factor
+        trend_factor = service.calculate_trend_adjustment(drug_id)
+        
+        return {
+            "drug_id": drug_id,
+            "drug_name": drug_info['name'],
+            "unit": drug_info['unit'],
+            "current_stock": current_stock,
+            "reorder_level": drug_info['reorder_level'],
+            "trend_factor": trend_factor,
+            "adaptive_predictions": predictions,
+            "summary": {
+                "total_predicted_7_days": sum(p['predicted_demand'] for p in predictions[:7]),
+                "total_base_prediction": sum(p['base_prediction'] for p in predictions[:7]),
+                "average_adjustment": sum(p['adjustment_applied'] for p in predictions[:7]) / len(predictions[:7])
+            },
+            "generated_at": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn

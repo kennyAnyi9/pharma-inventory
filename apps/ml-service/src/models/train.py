@@ -270,7 +270,7 @@ def main():
             
             model, metrics = train_model_for_drug(df, drug_id, drug_name)
             
-            if model is not None:
+            if model is not None and metrics is not None:
                 all_metrics.append(metrics)
                 successful_models += 1
                 
@@ -308,6 +308,60 @@ def main():
         print(f"\n❌ Error during training: {str(e)}")
         import traceback
         traceback.print_exc()
+
+def retrain_models_with_recent_data():
+    """Retrain XGBoost models with recent data - called from API endpoint"""
+    print("Starting model retraining with recent data...")
+    
+    try:
+        # Load data
+        df = load_historical_data()
+        
+        # Get unique drugs
+        drugs = df[['drug_id', 'drug_name']].drop_duplicates().sort_values('drug_id')
+        
+        training_results = []
+        successful_models = 0
+        
+        # Train model for each drug
+        for _, drug in drugs.iterrows():
+            drug_id = drug['drug_id']
+            drug_name = drug['drug_name']
+            
+            model, metrics = train_model_for_drug(df, drug_id, drug_name)
+            
+            if model is not None and metrics is not None:
+                training_results.append({
+                    'drug_id': drug_id,
+                    'drug_name': drug_name,
+                    'mae': metrics['mae'],
+                    'mape': metrics['mape'],
+                    'status': 'success'
+                })
+                successful_models += 1
+            else:
+                training_results.append({
+                    'drug_id': drug_id,
+                    'drug_name': drug_name,
+                    'status': 'failed',
+                    'reason': 'insufficient_data'
+                })
+        
+        return {
+            'total_drugs': len(drugs),
+            'successful_models': successful_models,
+            'failed_models': len(drugs) - successful_models,
+            'results': training_results
+        }
+        
+    except Exception as e:
+        return {
+            'status': 'error',
+            'error': str(e),
+            'total_drugs': 0,
+            'successful_models': 0,
+            'failed_models': 0
+        }
 
 if __name__ == "__main__":
     main()
