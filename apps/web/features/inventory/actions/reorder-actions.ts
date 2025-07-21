@@ -473,7 +473,7 @@ export async function calculateSingleDrugReorderLevel(drugId: number): Promise<b
       }
       
     } catch (error) {
-      console.log(`⚠️  ML failed, using statistical fallback: ${error.message}`)
+      console.log(`⚠️  ML failed, using statistical fallback: ${error instanceof Error ? error.message : 'Unknown error'}`)
       
       // Fallback: Use recent historical usage (fast database query)
       const recentUsage = await db
