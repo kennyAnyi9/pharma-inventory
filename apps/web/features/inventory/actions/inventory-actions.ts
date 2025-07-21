@@ -213,6 +213,17 @@ export async function recordUsage(data: z.infer<typeof recordUsageSchema>) {
       // Don't fail the usage recording if alert generation fails
     }
 
+    // Auto-update reorder levels based on new usage pattern (adaptive ML)
+    try {
+      // Import here to avoid circular dependencies
+      const { calculateSingleDrugReorderLevel } = await import('./reorder-actions')
+      await calculateSingleDrugReorderLevel(validated.drugId)
+      console.log(`✅ Auto-updated reorder level for drug ${validated.drugId} after usage recording`)
+    } catch (error) {
+      console.error('Failed to auto-update reorder level after usage recording:', error)
+      // Don't fail the usage recording if reorder calculation fails
+    }
+
     revalidatePath('/dashboard')
     revalidatePath('/inventory')
     revalidatePath('/forecasts')

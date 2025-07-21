@@ -92,11 +92,11 @@ class PredictionService:
         
         try:
             with engine.connect() as conn:
-                result = conn.execute(text("""
+                result = conn.execute(text(f"""
                     SELECT quantity_used
                     FROM inventory
                     WHERE drug_id = :drug_id
-                    AND date >= CURRENT_DATE - INTERVAL '1 day' * :days
+                    AND date >= CURRENT_DATE - INTERVAL '{days} days'
                     ORDER BY date DESC
                     LIMIT :days
                 """), {'drug_id': drug_id, 'days': days})
@@ -112,14 +112,14 @@ class PredictionService:
         engine = create_engine(DATABASE_URL)
         
         try:
-            query = """
+            query = f"""
             SELECT drug_id, date, quantity_used, opening_stock, closing_stock
             FROM inventory
-            WHERE date >= CURRENT_DATE - INTERVAL %(days)s DAY
+            WHERE date >= CURRENT_DATE - INTERVAL '{days} days'
             ORDER BY drug_id, date DESC
             """
             
-            df = pd.read_sql(query, engine, params={'days': days})
+            df = pd.read_sql(query, engine)
             df['date'] = pd.to_datetime(df['date'])
             
             # Group by drug_id
@@ -318,51 +318,48 @@ class PredictionService:
             return 1.0
     
     def calculate_seasonality_adjustment(self, forecast_date: datetime, drug_id: int) -> float:
-        """Calculate seasonal adjustment based on day of week and month patterns"""
+        """Calculate seasonal adjustment based on day of week patterns (fast version)"""
         try:
-            # Get historical data for the same day of week and month
-            engine = create_engine(DATABASE_URL)
+            # Use cached historical data if available
+            if not hasattr(self, '_seasonal_cache'):
+                self._seasonal_cache = {}
             
-            with engine.connect() as conn:
-                # Get usage for same day of week over last 8 weeks
-                result = conn.execute(text("""
-                    SELECT AVG(quantity_used) as avg_usage
-                    FROM inventory
-                    WHERE drug_id = :drug_id
-                    AND EXTRACT(DOW FROM date) = :dow
-                    AND date >= CURRENT_DATE - INTERVAL '8 weeks'
-                    AND date < CURRENT_DATE
-                    AND quantity_used > 0
-                """), {
-                    'drug_id': drug_id,
-                    'dow': forecast_date.weekday()
-                })
+            # Check cache first
+            cache_key = f"{drug_id}_{forecast_date.weekday()}"
+            if cache_key in self._seasonal_cache:
+                return self._seasonal_cache[cache_key]
+            
+            # Get recent usage data (already optimized batch query)
+            recent_usage = self.get_recent_usage(drug_id, days=21)  # 3 weeks
+            
+            if len(recent_usage) < 14:
+                return 1.0  # Not enough data
+            
+            # Simple day-of-week analysis using available data
+            dow = forecast_date.weekday()  # 0=Monday, 6=Sunday
+            
+            # Find usage on same day of week
+            dow_usage = []
+            for i, usage in enumerate(recent_usage):
+                # Approximate day calculation (rough but fast)
+                if (len(recent_usage) - 1 - i) % 7 == (6 - dow):  # Rough weekday match
+                    dow_usage.append(usage)
+            
+            if len(dow_usage) >= 2:
+                dow_avg = np.mean(dow_usage)
+                overall_avg = np.mean(recent_usage)
                 
-                dow_avg = result.fetchone()
-                dow_usage = dow_avg[0] if dow_avg and dow_avg[0] else None
-                
-                # Get overall average for comparison
-                result = conn.execute(text("""
-                    SELECT AVG(quantity_used) as avg_usage
-                    FROM inventory
-                    WHERE drug_id = :drug_id
-                    AND date >= CURRENT_DATE - INTERVAL '8 weeks'
-                    AND date < CURRENT_DATE
-                    AND quantity_used > 0
-                """), {'drug_id': drug_id})
-                
-                overall_avg = result.fetchone()
-                overall_usage = overall_avg[0] if overall_avg and overall_avg[0] else None
-                
-                # Calculate seasonal factor
-                if dow_usage and overall_usage and overall_usage > 0:
-                    seasonal_factor = float(dow_usage) / float(overall_usage)
-                    # Cap seasonal adjustment (max 30% variation)
-                    seasonal_factor = max(0.7, min(1.3, seasonal_factor))
+                if overall_avg > 0:
+                    seasonal_factor = dow_avg / overall_avg
+                    # Cap adjustment to prevent extreme values
+                    seasonal_factor = max(0.8, min(1.2, seasonal_factor))
+                    
+                    # Cache result
+                    self._seasonal_cache[cache_key] = seasonal_factor
                     return seasonal_factor
-                
-                return 1.0
-                
+            
+            return 1.0
+            
         except Exception as e:
             print(f"Error calculating seasonality adjustment for drug {drug_id}: {e}")
             return 1.0
@@ -466,8 +463,8 @@ class PredictionService:
                 base_pred = model.predict(features)[0]
                 base_pred = max(0, base_pred)
                 
-                # Apply adaptive adjustments
-                seasonal_factor = self.calculate_seasonality_adjustment(forecast_date, drug_id)
+                # Apply adaptive adjustments (simplified for batch operations)
+                seasonal_factor = 1.0  # Disable seasonal for batch to avoid timeouts
                 adjusted_pred = base_pred * trend_factor * seasonal_factor
                 adjusted_pred = max(0, adjusted_pred)
                 

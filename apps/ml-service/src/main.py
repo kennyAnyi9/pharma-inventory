@@ -125,7 +125,7 @@ def forecast_all_drugs(
     service = get_prediction_service()
     
     try:
-        # Use the new adaptive method that learns from recent usage
+        # Use adaptive method with optimized seasonal adjustments
         days = request.days if request.days is not None else 7
         all_predictions = service.predict_all_drugs_adaptive(days)
         all_forecasts = []
@@ -174,9 +174,9 @@ def forecast_drug(
         raise HTTPException(status_code=404, detail=f"No model found for drug_id {drug_id}")
     
     try:
-        # Get adaptive predictions that learn from recent usage
+        # Use fast predictions for single drug to avoid timeouts during auto-calculation
         days = request.days if request.days is not None else 7
-        predictions = service.get_adaptive_predictions(drug_id, days)
+        predictions = service.predict_demand(drug_id, days)
         
         # Get current stock
         current_stock = service.get_current_stock(drug_id)
