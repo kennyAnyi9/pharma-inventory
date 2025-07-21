@@ -444,3 +444,131 @@ export async function getLatestReorderCalculationStatus() {
     }
   }
 }
+
+/**
+ * Calculate reorder level for a single drug (used for automatic updates after usage recording)
+ */
+export async function calculateSingleDrugReorderLevel(drugId: number): Promise<boolean> {
+  try {
+    console.log(`🧠 Calculating adaptive reorder level for drug ${drugId}...`)
+    
+    // Try fast ML prediction first, with fallback to statistical method
+    let averageDailyDemand: number
+    let calculationMethod: string
+    let mlPredictionAccuracy = 75
+    
+    try {
+      // Attempt ML prediction with short timeout
+      const mlPrediction = await Promise.race([
+        getMLPredictionForDrug(drugId),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('ML timeout')), 5000))
+      ]) as any
+      
+      if (mlPrediction && mlPrediction.total_predicted_7_days) {
+        averageDailyDemand = mlPrediction.total_predicted_7_days / 7
+        calculationMethod = 'adaptive_ml'
+        console.log(`✅ ML prediction: ${averageDailyDemand.toFixed(1)} units/day`)
+      } else {
+        throw new Error('Invalid ML response')
+      }
+      
+    } catch (error) {
+      console.log(`⚠️  ML failed, using statistical fallback: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      
+      // Fallback: Use recent historical usage (fast database query)
+      const recentUsage = await db
+        .select({
+          avgUsage: sql<number>`AVG(quantity_used)`,
+          maxUsage: sql<number>`MAX(quantity_used)`,
+        })
+        .from(inventory)
+        .where(
+          and(
+            eq(inventory.drugId, drugId),
+            sql`date >= CURRENT_DATE - INTERVAL '14 days'`
+          )
+        )
+      
+      averageDailyDemand = Number(recentUsage[0]?.avgUsage || 30) // Default fallback
+      calculationMethod = 'statistical_fallback'
+      mlPredictionAccuracy = 60
+      console.log(`✅ Statistical fallback: ${averageDailyDemand.toFixed(1)} units/day`)
+    }
+
+    // Calculate optimal reorder level (same logic regardless of source)
+    const demandVariability = 0.3 // Default variability estimate
+    const leadTimeDays = 7  // Default supplier lead time
+    const safetyStockDays = Math.max(2, Math.min(5, demandVariability * 2))
+    const optimalReorderLevel = Math.ceil(averageDailyDemand * (leadTimeDays + safetyStockDays))
+
+    // Update the drug's reorder level
+    await db
+      .update(drugs)
+      .set({
+        reorderLevel: optimalReorderLevel,
+        calculatedReorderLevel: optimalReorderLevel,
+        updatedAt: new Date(),
+      })
+      .where(eq(drugs.id, drugId))
+
+    // Record the calculation
+    await db.insert(reorderCalculations).values({
+      drugId,
+      calculatedLevel: optimalReorderLevel,
+      avgDailyDemand: averageDailyDemand.toString(),
+      demandStdDev: (demandVariability * averageDailyDemand).toString(),
+      safetyStock: Math.ceil(averageDailyDemand * safetyStockDays),
+      leadTimeDays,
+      confidenceLevel: '0.95',
+      calculationMethod,
+      calculationDate: new Date(),
+    })
+
+    console.log(`✅ Updated reorder level for drug ${drugId}: ${optimalReorderLevel} (method: ${calculationMethod})`)
+    return true
+    
+  } catch (error) {
+    console.error(`❌ Failed to calculate reorder level for drug ${drugId}:`, error)
+    return false
+  }
+}
+
+/**
+ * Get ML prediction for a single drug
+ */
+async function getMLPredictionForDrug(drugId: number) {
+  try {
+    // Get environment variables
+    const ML_SERVICE_URL = process.env.ML_SERVICE_URL
+    const ML_API_KEY = process.env.ML_API_KEY
+
+    if (!ML_SERVICE_URL) {
+      throw new Error('ML_SERVICE_URL environment variable is not set')
+    }
+
+    if (!ML_API_KEY) {
+      throw new Error('ML_API_KEY environment variable is not set')
+    }
+
+    const response = await fetch(`${ML_SERVICE_URL}/forecast/${drugId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': ML_API_KEY,
+      },
+      body: JSON.stringify({ days: 7 }),
+      cache: 'no-store',
+      signal: AbortSignal.timeout(10000), // 10 second timeout for single drug
+    })
+
+    if (!response.ok) {
+      throw new Error(`ML service responded with status ${response.status}`)
+    }
+
+    return await response.json()
+    
+  } catch (error) {
+    console.error(`Failed to get ML prediction for drug ${drugId}:`, error)
+    return null
+  }
+}
