@@ -514,14 +514,13 @@ export async function calculateSingleDrugReorderLevel(drugId: number): Promise<b
     // Record the calculation
     await db.insert(reorderCalculations).values({
       drugId,
-      calculatedReorderLevel: optimalReorderLevel,
-      averageDailyDemand,
+      calculatedLevel: optimalReorderLevel,
+      avgDailyDemand: averageDailyDemand.toString(),
+      demandStdDev: (demandVariability * averageDailyDemand).toString(),
       safetyStock: Math.ceil(averageDailyDemand * safetyStockDays),
       leadTimeDays,
-      demandVariability,
-      mlPredictionAccuracy,
+      confidenceLevel: '0.95',
       calculationMethod,
-      notes: `Auto-calculated after usage recording`,
       calculationDate: new Date(),
     })
 
