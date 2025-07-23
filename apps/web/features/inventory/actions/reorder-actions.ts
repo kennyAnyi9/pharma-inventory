@@ -38,6 +38,16 @@ interface ReorderCalculationData {
   confidenceLevel: number
 }
 
+// Enhanced reorder data with intelligent timing
+interface EnhancedReorderData extends ReorderCalculationData {
+  reorderDate: string | null
+  daysUntilReorder: number | null
+  stockSufficiencyDays: number
+  reorderRecommendation: 'immediate' | 'upcoming' | 'sufficient' | 'overstocked'
+  intelligentReorderLevel: number
+  preventOverstockingNote: string
+}
+
 interface MLForecastData {
   drug_id: number
   drug_name: string
@@ -107,6 +117,17 @@ async function getMLPredictions(): Promise<MLForecastData[] | null> {
       dataKeys: Object.keys(data) 
     })
     
+    // Log sample data for debugging
+    if (data.forecasts?.length > 0) {
+      console.log('📡 Bulk ML Sample Data (first 2 drugs):', 
+        data.forecasts.slice(0, 2).map((f: any) => ({
+          drug_id: f.drug_id,
+          total_predicted_7_days: f.total_predicted_7_days,
+          avgDaily: (f.total_predicted_7_days / 7).toFixed(1)
+        }))
+      )
+    }
+    
     // Validate the response structure
     try {
       const validatedData = MLServiceResponseSchema.parse(data)
@@ -130,12 +151,14 @@ async function getMLPredictions(): Promise<MLForecastData[] | null> {
   }
 }
 
-// Calculate optimal reorder level using ML predictions
+// Enhanced reorder calculation with intelligent timing and overstocking prevention
 function calculateOptimalReorderLevel(
   forecast: MLForecastData,
   leadTimeDays: number,
+  databaseDrugId: number,
+  realCurrentStock: number,
   targetServiceLevel: number = 0.95
-): ReorderCalculationData {
+): EnhancedReorderData {
   // Calculate average daily demand from 7-day forecast
   const avgDailyDemand = forecast.total_predicted_7_days / 7
 
@@ -152,17 +175,95 @@ function calculateOptimalReorderLevel(
   // Safety stock calculation: Z * sqrt(lead_time) * demand_std_dev
   const safetyStock = Math.ceil(zScore * Math.sqrt(leadTimeDays) * demandStdDev)
 
-  // Reorder level: (avg_daily_demand * lead_time) + safety_stock
-  const calculatedLevel = Math.ceil((avgDailyDemand * leadTimeDays) + safetyStock)
+  // Traditional reorder level: (avg_daily_demand * lead_time) + safety_stock
+  const traditionalReorderLevel = Math.ceil((avgDailyDemand * leadTimeDays) + safetyStock)
+
+  // INTELLIGENT CALCULATIONS - Prevent overstocking and provide date-based recommendations
+  // Use REAL current stock from database, not outdated ML service data
+  const currentStock = realCurrentStock
+  const stockSufficiencyDays = Math.floor(currentStock / avgDailyDemand)
+
+  // Calculate when to actually reorder based on current stock and lead time
+  let reorderDate: string | null = null
+  let daysUntilReorder: number | null = null
+  let reorderRecommendation: 'immediate' | 'upcoming' | 'sufficient' | 'overstocked'
+  let intelligentReorderLevel: number
+  let preventOverstockingNote: string
+
+  if (stockSufficiencyDays <= leadTimeDays) {
+    // Stock will run out before or during lead time - IMMEDIATE
+    reorderRecommendation = 'immediate'
+    reorderDate = new Date().toISOString().split('T')[0] || null
+    daysUntilReorder = 0
+    intelligentReorderLevel = traditionalReorderLevel
+    preventOverstockingNote = 'Immediate action required - stock will run out within lead time'
+
+  } else if (stockSufficiencyDays <= (leadTimeDays + 7)) {
+    // Stock sufficient but should reorder within a week
+    reorderRecommendation = 'upcoming'
+    const daysBeforeStockOut = stockSufficiencyDays - leadTimeDays - 2 // 2 days buffer
+    daysUntilReorder = Math.max(1, daysBeforeStockOut)
+
+    const reorderDateObj = new Date()
+    reorderDateObj.setDate(reorderDateObj.getDate() + daysUntilReorder)
+    reorderDate = reorderDateObj.toISOString().split('T')[0] || null
+
+    intelligentReorderLevel = traditionalReorderLevel
+    preventOverstockingNote = `Reorder in ${daysUntilReorder} days to avoid stockout`
+
+  } else if (stockSufficiencyDays <= (leadTimeDays + 21)) {
+    // Stock sufficient for 2-3 weeks beyond lead time
+    reorderRecommendation = 'sufficient'
+    const daysBeforeStockOut = stockSufficiencyDays - leadTimeDays - 3 // 3 days buffer
+    daysUntilReorder = Math.max(7, daysBeforeStockOut)
+
+    const reorderDateObj = new Date()
+    reorderDateObj.setDate(reorderDateObj.getDate() + daysUntilReorder)
+    reorderDate = reorderDateObj.toISOString().split('T')[0] || null
+
+    // Reduce reorder level to prevent overstocking
+    intelligentReorderLevel = Math.ceil(traditionalReorderLevel * 0.8)
+    preventOverstockingNote = `Stock sufficient for ${stockSufficiencyDays} days. Reduced reorder level to prevent overstocking`
+
+  } else {
+    // Stock sufficient for more than 3 weeks beyond lead time - OVERSTOCKED
+    reorderRecommendation = 'overstocked'
+    daysUntilReorder = stockSufficiencyDays - leadTimeDays - 7 // Wait until much closer to need
+
+    const reorderDateObj = new Date()
+    reorderDateObj.setDate(reorderDateObj.getDate() + daysUntilReorder)
+    reorderDate = reorderDateObj.toISOString().split('T')[0] || null
+
+    // Significantly reduce reorder level to prevent further overstocking
+    intelligentReorderLevel = Math.ceil(traditionalReorderLevel * 0.5)
+    preventOverstockingNote = `OVERSTOCKED: ${stockSufficiencyDays} days of stock available. Do not reorder until ${reorderDate}`
+  }
+
+  console.log(`🎯 Enhanced Reorder Analysis for ${forecast.drug_name}:`, {
+    currentStock,
+    stockSufficiencyDays,
+    leadTimeDays,
+    recommendation: reorderRecommendation,
+    reorderDate,
+    traditionalLevel: traditionalReorderLevel,
+    intelligentLevel: intelligentReorderLevel
+  })
 
   return {
-    drugId: forecast.drug_id,
-    calculatedLevel,
+    drugId: databaseDrugId,
+    calculatedLevel: traditionalReorderLevel, // Keep traditional for audit
     safetyStock,
     avgDailyDemand,
     demandStdDev,
     leadTimeDays,
-    confidenceLevel: targetServiceLevel
+    confidenceLevel: targetServiceLevel,
+    // Enhanced intelligence
+    reorderDate,
+    daysUntilReorder,
+    stockSufficiencyDays,
+    reorderRecommendation,
+    intelligentReorderLevel,
+    preventOverstockingNote
   }
 }
 
@@ -171,6 +272,12 @@ export async function calculateAllReorderLevels() {
   try {
     console.log('Starting reorder level calculation for all drugs...')
     
+    // Check environment variables
+    console.log('🔧 Environment check:', {
+      ML_SERVICE_URL: process.env.ML_SERVICE_URL ? 'SET' : 'MISSING',
+      ML_API_KEY: process.env.ML_API_KEY ? 'SET' : 'MISSING'
+    })
+    
     // Get ML predictions
     const mlPredictions = await getMLPredictions()
     if (!mlPredictions) {
@@ -178,16 +285,35 @@ export async function calculateAllReorderLevels() {
     }
     
     console.log(`Retrieved ML predictions for ${mlPredictions.length} drugs`)
+    if (mlPredictions.length > 0) {
+      console.log('First ML prediction sample:', mlPredictions[0])
+    }
 
-    // Get drugs with supplier information
+    // Get drugs with supplier and current stock information
     const drugsWithSuppliers = await db
       .select({
         drugId: drugs.id,
         drugName: drugs.name,
         supplierId: drugs.supplier,
         currentReorderLevel: drugs.reorderLevel,
+        currentStock: inventory.closingStock,
       })
       .from(drugs)
+      .leftJoin(
+        inventory,
+        and(
+          eq(drugs.id, inventory.drugId),
+          eq(
+            inventory.date,
+            sql`(SELECT MAX(date) FROM inventory WHERE drug_id = ${drugs.id})`
+          )
+        )
+      )
+
+    console.log(`Found ${drugsWithSuppliers.length} drugs in database`)
+    if (drugsWithSuppliers.length > 0) {
+      console.log('First drug sample:', drugsWithSuppliers[0])
+    }
 
     // Get default delivery days from suppliers
     const supplierData = await db
@@ -199,16 +325,51 @@ export async function calculateAllReorderLevels() {
 
     const supplierMap = new Map(supplierData.map(s => [s.name, s.deliveryDays || 7]))
 
-    const calculations: ReorderCalculationData[] = []
+    const calculations: EnhancedReorderData[] = []
     const updates: Array<{ drugId: number; calculatedLevel: number; confidence: number }> = []
 
     // Process each drug
     for (const drug of drugsWithSuppliers) {
-      const mlForecast = mlPredictions.find(f => f.drug_id === drug.drugId)
-      if (!mlForecast) continue
+      // Match by drug name - try exact match first, then partial match
+      let mlForecast = mlPredictions.find(f => f.drug_name === drug.drugName)
+      
+      // If no exact match, try matching by first word (generic name without dosage)
+      if (!mlForecast) {
+        const genericName = drug.drugName.split(' ')[0] // Get first word
+        mlForecast = mlPredictions.find(f => f.drug_name === genericName)
+      }
+      
+      // If still no match, try matching the other way (ML name contains drug name)
+      if (!mlForecast) {
+        mlForecast = mlPredictions.find(f => 
+          drug.drugName.toLowerCase().includes(f.drug_name.toLowerCase()) ||
+          f.drug_name.toLowerCase().includes((drug.drugName.split(' ')[0] || '').toLowerCase())
+        )
+      }
+      
+      if (!mlForecast) {
+        console.log(`⚠️  No ML forecast found for drug ${drug.drugId} (${drug.drugName})`)
+        console.log(`Available ML drug names: ${mlPredictions.map(f => f.drug_name).join(', ')}`)
+        continue
+      }
+      
+      console.log(`✅ Matched "${drug.drugName}" with ML forecast "${mlForecast.drug_name}"`)
+      
 
       const leadTimeDays = supplierMap.get(drug.supplierId || '') || 7
-      const calculation = calculateOptimalReorderLevel(mlForecast, leadTimeDays)
+      console.log(`🔍 Debug supplier lookup for ${drug.drugName}:`, {
+        supplierInDrug: drug.supplierId,
+        supplierMapKeys: Array.from(supplierMap.keys()),
+        resolvedLeadTime: leadTimeDays
+      })
+      console.log(`📊 Bulk processing drug ${drug.drugId} (${drug.drugName}):`, {
+        total_7_days: mlForecast.total_predicted_7_days,
+        avgDaily: (mlForecast.total_predicted_7_days / 7).toFixed(1),
+        leadTimeDays,
+        method: 'bulk_endpoint'
+      })
+      
+      const calculation = calculateOptimalReorderLevel(mlForecast, leadTimeDays, drug.drugId, drug.currentStock || 0)
 
       calculations.push(calculation)
       updates.push({
@@ -220,7 +381,7 @@ export async function calculateAllReorderLevels() {
 
     // Save calculations and update drugs (without transaction due to neon-http driver limitation)
     if (calculations.length > 0) {
-      // Insert calculations to audit table
+      // Insert calculations to audit table with enhanced data
       await db.insert(reorderCalculations).values(
         calculations.map(calc => ({
           drugId: calc.drugId,
@@ -230,22 +391,32 @@ export async function calculateAllReorderLevels() {
           demandStdDev: calc.demandStdDev.toString(),
           leadTimeDays: calc.leadTimeDays,
           confidenceLevel: calc.confidenceLevel.toString(),
+          calculationMethod: 'enhanced_ml_forecast',
+          // Enhanced intelligent fields
+          reorderDate: calc.reorderDate,
+          daysUntilReorder: calc.daysUntilReorder,
+          stockSufficiencyDays: calc.stockSufficiencyDays,
+          reorderRecommendation: calc.reorderRecommendation,
+          intelligentReorderLevel: calc.intelligentReorderLevel,
+          preventOverstockingNote: calc.preventOverstockingNote,
         }))
       )
 
-      // Batch update drugs table with calculated reorder levels
-      // Set both calculatedReorderLevel and reorderLevel to ML value for simplified ML-only system
-      const updatePromises = updates.map(update => 
-        db.update(drugs)
+      // Batch update drugs table with intelligent reorder levels
+      // Use intelligent level to prevent overstocking, keep traditional for audit
+      const updatePromises = updates.map((update, index) => {
+        const calculation = calculations[index]
+        if (!calculation) throw new Error(`Calculation missing for index ${index}`)
+        return db.update(drugs)
           .set({
-            calculatedReorderLevel: update.calculatedLevel,
-            reorderLevel: update.calculatedLevel, // Set manual level to ML level
+            calculatedReorderLevel: update.calculatedLevel, // Traditional for audit
+            reorderLevel: calculation.intelligentReorderLevel, // Use intelligent level for actual decisions
             reorderCalculationConfidence: update.confidence.toString(),
             lastReorderCalculation: new Date(),
             updatedAt: new Date(),
           })
           .where(eq(drugs.id, update.drugId))
-      )
+      })
       
       await Promise.all(updatePromises)
     }
@@ -258,13 +429,25 @@ export async function calculateAllReorderLevels() {
     return {
       success: true,
       calculationsCount: calculations.length,
-      calculations: calculations.map(calc => ({
+      enhancedCalculations: calculations.map(calc => ({
         drugId: calc.drugId,
         calculatedLevel: calc.calculatedLevel,
+        intelligentReorderLevel: calc.intelligentReorderLevel,
         safetyStock: calc.safetyStock,
         avgDailyDemand: calc.avgDailyDemand,
         leadTimeDays: calc.leadTimeDays,
-      }))
+        stockSufficiencyDays: calc.stockSufficiencyDays,
+        reorderDate: calc.reorderDate,
+        reorderRecommendation: calc.reorderRecommendation,
+        preventOverstockingNote: calc.preventOverstockingNote,
+      })),
+      // Summary of recommendations
+      recommendationSummary: {
+        immediate: calculations.filter(calc => calc.reorderRecommendation === 'immediate').length,
+        upcoming: calculations.filter(calc => calc.reorderRecommendation === 'upcoming').length,
+        sufficient: calculations.filter(calc => calc.reorderRecommendation === 'sufficient').length,
+        overstocked: calculations.filter(calc => calc.reorderRecommendation === 'overstocked').length,
+      }
     }
   } catch (error) {
     console.error('Failed to calculate reorder levels:', error)
@@ -452,24 +635,46 @@ export async function calculateSingleDrugReorderLevel(drugId: number): Promise<b
   try {
     console.log(`🧠 Calculating adaptive reorder level for drug ${drugId}...`)
     
+    // Check current state before calculation
+    const currentState = await db
+      .select({
+        currentReorderLevel: drugs.reorderLevel,
+        calculatedReorderLevel: drugs.calculatedReorderLevel,
+      })
+      .from(drugs)
+      .where(eq(drugs.id, drugId))
+    
+    console.log(`📊 Current state for drug ${drugId}:`, currentState[0])
+    
     // Try fast ML prediction first, with fallback to statistical method
     let averageDailyDemand: number
     let calculationMethod: string
     let mlPredictionAccuracy = 75
     
     try {
-      // Attempt ML prediction with short timeout
-      const mlPrediction = await Promise.race([
-        getMLPredictionForDrug(drugId),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('ML timeout')), 5000))
-      ]) as any
+      // Use bulk endpoint (more reliable) instead of individual endpoint
+      console.log(`🔄 Fetching ML predictions via bulk endpoint for drug ${drugId}...`)
+      const mlPredictions = await getMLPredictions()
+      
+      if (!mlPredictions) {
+        throw new Error('Bulk ML service failed')
+      }
+      
+      const mlPrediction = mlPredictions.find(f => f.drug_id === drugId)
+      if (!mlPrediction) {
+        throw new Error(`No ML forecast found for drug ${drugId}`)
+      }
       
       if (mlPrediction && mlPrediction.total_predicted_7_days) {
         averageDailyDemand = mlPrediction.total_predicted_7_days / 7
-        calculationMethod = 'adaptive_ml'
-        console.log(`✅ ML prediction: ${averageDailyDemand.toFixed(1)} units/day`)
+        calculationMethod = 'adaptive_ml_bulk'
+        console.log(`✅ Bulk ML prediction for drug ${drugId}:`, {
+          total_7_days: mlPrediction.total_predicted_7_days,
+          avgDaily: averageDailyDemand.toFixed(1),
+          method: 'bulk_endpoint_individual'
+        })
       } else {
-        throw new Error('Invalid ML response')
+        throw new Error('Invalid ML response from bulk endpoint')
       }
       
     } catch (error) {
@@ -495,11 +700,31 @@ export async function calculateSingleDrugReorderLevel(drugId: number): Promise<b
       console.log(`✅ Statistical fallback: ${averageDailyDemand.toFixed(1)} units/day`)
     }
 
-    // Calculate optimal reorder level (same logic regardless of source)
-    const demandVariability = 0.3 // Default variability estimate
-    const leadTimeDays = 7  // Default supplier lead time
-    const safetyStockDays = Math.max(2, Math.min(5, demandVariability * 2))
-    const optimalReorderLevel = Math.ceil(averageDailyDemand * (leadTimeDays + safetyStockDays))
+    // Get supplier-specific lead time (same logic as bulk calculation)
+    const drugData = await db
+      .select({
+        supplierId: drugs.supplier,
+      })
+      .from(drugs)
+      .where(eq(drugs.id, drugId))
+
+    let leadTimeDays = 7 // Default
+    if (drugData[0]?.supplierId) {
+      const supplierData = await db
+        .select({
+          deliveryDays: suppliers.deliveryDays,
+        })
+        .from(suppliers)
+        .where(eq(suppliers.name, drugData[0].supplierId))
+      
+      leadTimeDays = supplierData[0]?.deliveryDays || 7
+    }
+
+    // Calculate optimal reorder level using SAME formula as bulk calculation
+    const demandStdDev = averageDailyDemand * 0.3 // Estimate std dev as 30% of mean
+    const zScore = 1.96 // 95% service level (same as bulk)
+    const safetyStock = Math.ceil(zScore * Math.sqrt(leadTimeDays) * demandStdDev)
+    const optimalReorderLevel = Math.ceil((averageDailyDemand * leadTimeDays) + safetyStock)
 
     // Update the drug's reorder level
     await db
@@ -516,15 +741,26 @@ export async function calculateSingleDrugReorderLevel(drugId: number): Promise<b
       drugId,
       calculatedLevel: optimalReorderLevel,
       avgDailyDemand: averageDailyDemand.toString(),
-      demandStdDev: (demandVariability * averageDailyDemand).toString(),
-      safetyStock: Math.ceil(averageDailyDemand * safetyStockDays),
+      demandStdDev: demandStdDev.toString(),
+      safetyStock: safetyStock,
       leadTimeDays,
       confidenceLevel: '0.95',
       calculationMethod,
       calculationDate: new Date(),
     })
 
+    // Verify the update actually worked
+    const finalState = await db
+      .select({
+        currentReorderLevel: drugs.reorderLevel,
+        calculatedReorderLevel: drugs.calculatedReorderLevel,
+      })
+      .from(drugs)
+      .where(eq(drugs.id, drugId))
+    
     console.log(`✅ Updated reorder level for drug ${drugId}: ${optimalReorderLevel} (method: ${calculationMethod})`)
+    console.log(`📊 Final state for drug ${drugId}:`, finalState[0])
+    
     return true
     
   } catch (error) {
@@ -558,7 +794,7 @@ async function getMLPredictionForDrug(drugId: number) {
       },
       body: JSON.stringify({ days: 7 }),
       cache: 'no-store',
-      signal: AbortSignal.timeout(10000), // 10 second timeout for single drug
+      signal: AbortSignal.timeout(20000), // 20 second timeout for single drug
     })
 
     if (!response.ok) {

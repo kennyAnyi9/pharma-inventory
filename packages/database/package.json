@@ -11,6 +11,8 @@
     "db:seed": "tsx src/seed/seed.ts",
     "db:reset": "tsx src/reset.ts",
     "db:create": "tsx src/create-tables.ts",
+    "db:check-stock": "tsx src/check-stock-levels.ts",
+    "db:quick-stock": "tsx src/quick-stock-check.ts",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {

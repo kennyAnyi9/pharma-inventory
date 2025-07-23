@@ -9,7 +9,7 @@
       "schedule": "0 2 * * *"
     },
     {
-      "path": "/api/cron/daily-alerts",
+      "path": "/api/cron/daily-alerts", 
       "schedule": "0 6 * * *"
     }
   ]

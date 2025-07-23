@@ -1,4 +1,4 @@
-import { pgTable, serial, integer, decimal, timestamp, varchar } from 'drizzle-orm/pg-core'
+import { pgTable, serial, integer, decimal, timestamp, varchar, date } from 'drizzle-orm/pg-core'
 import { drugs } from './drugs'
 
 export const reorderCalculations = pgTable('reorder_calculations', {
@@ -13,6 +13,13 @@ export const reorderCalculations = pgTable('reorder_calculations', {
   calculationMethod: varchar('calculation_method', { length: 100 }).notNull().default('ml_forecast'),
   calculationDate: timestamp('calculation_date').notNull().defaultNow(),
   createdAt: timestamp('created_at').notNull().defaultNow(),
+  // Enhanced intelligent reorder fields
+  reorderDate: date('reorder_date'), // When to place the order
+  daysUntilReorder: integer('days_until_reorder'), // Days until reorder is needed
+  stockSufficiencyDays: integer('stock_sufficiency_days'), // How many days current stock will last
+  reorderRecommendation: varchar('reorder_recommendation', { length: 20 }), // 'immediate', 'upcoming', 'sufficient', 'overstocked'
+  intelligentReorderLevel: integer('intelligent_reorder_level'), // AI-adjusted reorder level
+  preventOverstockingNote: varchar('prevent_overstocking_note', { length: 500 }), // Explanation
 })
 
 export type ReorderCalculation = typeof reorderCalculations.$inferSelect

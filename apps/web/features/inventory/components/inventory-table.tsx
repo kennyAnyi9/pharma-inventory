@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import { acceptCalculatedReorderLevel } from '../actions/reorder-actions'
+import { useToast } from '@workspace/ui/hooks/use-toast'
 import {
   Table,
   TableBody,
@@ -15,7 +17,7 @@ import { StockLevelBadge } from './stock-level-badge'
 import { StockUpdateDialog } from './stock-update-dialog'
 import { UsageRecordDialog } from './usage-record-dialog'
 import { ReorderLevelDialog } from './reorder-level-dialog'
-import { Package, Minus, Search, Filter, TrendingUp, TrendingDown, AlertTriangle, Brain } from 'lucide-react'
+import { Package, Minus, Search, Filter, TrendingUp, TrendingDown, AlertTriangle, Brain, Check, X } from 'lucide-react'
 
 interface InventoryItem {
   drugId: number
@@ -32,6 +34,13 @@ interface InventoryItem {
   reorderLevelVariance: number | null
   stockStatus: 'critical' | 'low' | 'normal' | 'good'
   supplier: string | null
+  // Enhanced intelligent reorder fields
+  reorderDate: string | null
+  daysUntilReorder: number | null
+  stockSufficiencyDays: number | null
+  reorderRecommendation: string | null
+  intelligentReorderLevel: number | null
+  preventOverstockingNote: string | null
 }
 
 interface InventoryTableProps {
@@ -45,6 +54,8 @@ export function InventoryTable({ data }: InventoryTableProps) {
   const [usageDialogOpen, setUsageDialogOpen] = useState(false)
   const [reorderDialogOpen, setReorderDialogOpen] = useState(false)
   const [filterStatus, setFilterStatus] = useState<'all' | 'critical' | 'low' | 'normal' | 'good'>('all')
+  const [acceptingReorder, setAcceptingReorder] = useState<number | null>(null)
+  const { toast } = useToast()
 
   const filteredData = data.filter(item => {
     const matchesSearch = item.drugName.toLowerCase().includes(search.toLowerCase()) ||
@@ -65,9 +76,30 @@ export function InventoryTable({ data }: InventoryTableProps) {
     setUsageDialogOpen(true)
   }
 
-  const handleReorderLevelAnalysis = (drug: InventoryItem) => {
+  const handleReorderInfo = (drug: InventoryItem) => {
     setSelectedDrug(drug)
     setReorderDialogOpen(true)
+  }
+
+  const handleAcceptMLRecommendation = async (drugId: number) => {
+    setAcceptingReorder(drugId)
+    try {
+      await acceptCalculatedReorderLevel(drugId)
+      toast({
+        title: 'Success',
+        description: 'ML recommendation accepted and reorder level updated',
+      })
+      // Refresh the page to show updated data
+      window.location.reload()
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to accept ML recommendation',
+        variant: 'destructive',
+      })
+    } finally {
+      setAcceptingReorder(null)
+    }
   }
 
   const getStockIcon = (status: string) => {
@@ -165,9 +197,7 @@ export function InventoryTable({ data }: InventoryTableProps) {
               <TableHeader>
                 <TableRow className="bg-muted/50">
                   <TableHead className="text-heading-sm min-w-[200px]">Drug Name</TableHead>
-                  <TableHead className="text-heading-sm min-w-[120px]">Category</TableHead>
                   <TableHead className="text-heading-sm min-w-[140px]">Stock Level</TableHead>
-                  <TableHead className="text-heading-sm min-w-[160px]">Reorder Level</TableHead>
                   <TableHead className="text-heading-sm min-w-[120px]">Supplier</TableHead>
                   <TableHead className="text-right text-heading-sm min-w-[280px]">Actions</TableHead>
                 </TableRow>
@@ -197,41 +227,12 @@ export function InventoryTable({ data }: InventoryTableProps) {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className="text-body-md">{item.category}</TableCell>
                     <TableCell>
                       <StockLevelBadge
                         status={item.stockStatus}
                         currentStock={item.currentStock}
                         unit={item.unit}
                       />
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-body-md font-medium">
-                            {item.effectiveReorderLevel} {item.unit}
-                          </span>
-                          {item.hasCalculatedReorderLevel ? (
-                            <div title="ML-optimized reorder level">
-                              <Brain className="h-3 w-3 text-blue-500" />
-                            </div>
-                          ) : (
-                            <div title="Default reorder level - ML calculation pending">
-                              <AlertTriangle className="h-3 w-3 text-yellow-500" />
-                            </div>
-                          )}
-                        </div>
-                        {!item.hasCalculatedReorderLevel && (
-                          <div className="text-xs text-muted-foreground">
-                            Default level - Run ML calculation
-                          </div>
-                        )}
-                        {item.lastReorderCalculation && (
-                          <div className="text-xs text-muted-foreground">
-                            Updated: {new Date(item.lastReorderCalculation).toLocaleDateString()}
-                          </div>
-                        )}
-                      </div>
                     </TableCell>
                     <TableCell>
                       <div className="text-body-md">
@@ -259,6 +260,16 @@ export function InventoryTable({ data }: InventoryTableProps) {
                           <Minus className="mr-1 h-3 w-3" />
                           <span className="hidden sm:inline">Record Usage</span>
                           <span className="sm:hidden">Use</span>
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleReorderInfo(item)}
+                          className="transition-all duration-200 ease-in-out hover:bg-blue/10 hover:border-blue/20 whitespace-nowrap"
+                        >
+                          <Package className="mr-1 h-3 w-3" />
+                          <span className="hidden sm:inline">Reorder Info</span>
+                          <span className="sm:hidden">Info</span>
                         </Button>
                       </div>
                     </TableCell>
@@ -291,8 +302,7 @@ export function InventoryTable({ data }: InventoryTableProps) {
             onOpenChange={setUsageDialogOpen}
           />
           <ReorderLevelDialog
-            drugId={selectedDrug.drugId}
-            drugName={selectedDrug.drugName}
+            drug={selectedDrug}
             open={reorderDialogOpen}
             onOpenChange={setReorderDialogOpen}
           />
