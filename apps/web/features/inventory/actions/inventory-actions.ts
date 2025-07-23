@@ -1,7 +1,7 @@
 'use server'
 
 import { db } from '@/lib/db'
-import { drugs, inventory } from '@workspace/database'
+import { drugs, inventory, reorderCalculations } from '@workspace/database'
 import { eq, desc, and, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
@@ -36,6 +36,13 @@ export async function getInventoryStatus() {
         reorderCalculationConfidence: drugs.reorderCalculationConfidence,
         lastUpdated: inventory.updatedAt,
         supplier: drugs.supplier,
+        // Enhanced intelligent reorder fields
+        reorderDate: reorderCalculations.reorderDate,
+        daysUntilReorder: reorderCalculations.daysUntilReorder,
+        stockSufficiencyDays: reorderCalculations.stockSufficiencyDays,
+        reorderRecommendation: reorderCalculations.reorderRecommendation,
+        intelligentReorderLevel: reorderCalculations.intelligentReorderLevel,
+        preventOverstockingNote: reorderCalculations.preventOverstockingNote,
       })
       .from(drugs)
       .leftJoin(
@@ -48,12 +55,24 @@ export async function getInventoryStatus() {
           )
         )
       )
+      .leftJoin(
+        reorderCalculations,
+        and(
+          eq(drugs.id, reorderCalculations.drugId),
+          eq(
+            reorderCalculations.calculationDate,
+            sql`(SELECT MAX(calculation_date) FROM reorder_calculations WHERE drug_id = ${drugs.id})`
+          )
+        )
+      )
       .orderBy(drugs.name)
 
+    console.log('Raw inventory query results:', result.slice(0, 2))
+
     return result.map(item => {
-      // Prioritize ML-calculated reorder level, fallback to manual only if ML hasn't run yet
-      const effectiveReorderLevel = item.calculatedReorderLevel || item.reorderLevel || 100
-      const usingMLLevel = !!item.calculatedReorderLevel
+      // Use intelligent reorder level if available, otherwise use calculated or fallback to manual
+      const effectiveReorderLevel = item.intelligentReorderLevel || item.calculatedReorderLevel || item.reorderLevel || 100
+      const usingMLLevel = !!(item.intelligentReorderLevel || item.calculatedReorderLevel)
       
       return {
         ...item,
@@ -65,6 +84,13 @@ export async function getInventoryStatus() {
         reorderLevelVariance: item.calculatedReorderLevel 
           ? item.calculatedReorderLevel - item.reorderLevel 
           : null,
+        // Ensure all enhanced fields are included (they come from the database join)
+        reorderDate: item.reorderDate || null,
+        daysUntilReorder: item.daysUntilReorder || null,
+        stockSufficiencyDays: item.stockSufficiencyDays || null,
+        reorderRecommendation: item.reorderRecommendation || null,
+        intelligentReorderLevel: item.intelligentReorderLevel || null,
+        preventOverstockingNote: item.preventOverstockingNote || null,
       }
     })
   } catch (error) {
@@ -213,16 +239,9 @@ export async function recordUsage(data: z.infer<typeof recordUsageSchema>) {
       // Don't fail the usage recording if alert generation fails
     }
 
-    // Auto-update reorder levels based on new usage pattern (adaptive ML)
-    try {
-      // Import here to avoid circular dependencies
-      const { calculateSingleDrugReorderLevel } = await import('./reorder-actions')
-      await calculateSingleDrugReorderLevel(validated.drugId)
-      console.log(`✅ Auto-updated reorder level for drug ${validated.drugId} after usage recording`)
-    } catch (error) {
-      console.error('Failed to auto-update reorder level after usage recording:', error)
-      // Don't fail the usage recording if reorder calculation fails
-    }
+    // Note: Reorder levels are updated by scheduled cron job (daily at 2 AM)
+    // This avoids constant fluctuations and provides stable planning targets
+    console.log(`📋 Usage recorded for drug ${validated.drugId}. Reorder levels updated by daily cron job.`)
 
     revalidatePath('/dashboard')
     revalidatePath('/inventory')

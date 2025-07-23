@@ -325,7 +325,7 @@ export async function calculateAllReorderLevels() {
 
     const supplierMap = new Map(supplierData.map(s => [s.name, s.deliveryDays || 7]))
 
-    const calculations: ReorderCalculationData[] = []
+    const calculations: EnhancedReorderData[] = []
     const updates: Array<{ drugId: number; calculatedLevel: number; confidence: number }> = []
 
     // Process each drug
@@ -343,7 +343,7 @@ export async function calculateAllReorderLevels() {
       if (!mlForecast) {
         mlForecast = mlPredictions.find(f => 
           drug.drugName.toLowerCase().includes(f.drug_name.toLowerCase()) ||
-          f.drug_name.toLowerCase().includes(drug.drugName.split(' ')[0].toLowerCase())
+          f.drug_name.toLowerCase().includes((drug.drugName.split(' ')[0] || '').toLowerCase())
         )
       }
       
@@ -375,7 +375,6 @@ export async function calculateAllReorderLevels() {
       updates.push({
         drugId: drug.drugId,
         calculatedLevel: calculation.calculatedLevel,
-        intelligentLevel: calculation.intelligentReorderLevel, // Use intelligent level for actual reordering
         confidence: calculation.confidenceLevel
       })
     }
@@ -405,17 +404,19 @@ export async function calculateAllReorderLevels() {
 
       // Batch update drugs table with intelligent reorder levels
       // Use intelligent level to prevent overstocking, keep traditional for audit
-      const updatePromises = updates.map(update => 
-        db.update(drugs)
+      const updatePromises = updates.map((update, index) => {
+        const calculation = calculations[index]
+        if (!calculation) throw new Error(`Calculation missing for index ${index}`)
+        return db.update(drugs)
           .set({
             calculatedReorderLevel: update.calculatedLevel, // Traditional for audit
-            reorderLevel: update.intelligentLevel, // Use intelligent level for actual decisions
+            reorderLevel: calculation.intelligentReorderLevel, // Use intelligent level for actual decisions
             reorderCalculationConfidence: update.confidence.toString(),
             lastReorderCalculation: new Date(),
             updatedAt: new Date(),
           })
           .where(eq(drugs.id, update.drugId))
-      )
+      })
       
       await Promise.all(updatePromises)
     }

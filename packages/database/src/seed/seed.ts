@@ -2,7 +2,7 @@ import { drizzle } from 'drizzle-orm/neon-http'
 import { neon } from '@neondatabase/serverless'
 import * as dotenv from 'dotenv'
 import { resolve } from 'path'
-import { drugs, inventory } from '../schema'
+import { drugs, inventory, reorderCalculations } from '../schema'
 
 // Load environment variables with flexible path strategy
 const envPaths = [
@@ -160,11 +160,29 @@ async function seed() {
   try {
     console.log('🌱 Starting seed...')
     
+    // First, run the migration to add intelligent reorder fields
+    console.log('🚀 Running intelligent reorder fields migration...')
+    try {
+      await sql(`
+        ALTER TABLE reorder_calculations 
+        ADD COLUMN IF NOT EXISTS reorder_date DATE,
+        ADD COLUMN IF NOT EXISTS days_until_reorder INTEGER,
+        ADD COLUMN IF NOT EXISTS stock_sufficiency_days INTEGER,
+        ADD COLUMN IF NOT EXISTS reorder_recommendation VARCHAR(20),
+        ADD COLUMN IF NOT EXISTS intelligent_reorder_level INTEGER,
+        ADD COLUMN IF NOT EXISTS prevent_overstocking_note VARCHAR(500)
+      `)
+      console.log('✅ Migration completed successfully!')
+    } catch (migrationError) {
+      console.log('ℹ️ Migration columns may already exist, continuing...')
+    }
+    
     // Start transaction
     await sql('BEGIN')
     
     try {
-      // Clear existing data
+      // Clear existing data in correct order (foreign key constraints)
+      await db.delete(reorderCalculations)  // Delete child records first
       await db.delete(inventory)
       await db.delete(drugs)
       

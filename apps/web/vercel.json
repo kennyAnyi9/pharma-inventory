@@ -9,8 +9,12 @@
       "schedule": "0 2 * * *"
     },
     {
-      "path": "/api/cron/daily-alerts",
+      "path": "/api/cron/daily-alerts", 
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/generate-daily-report",
+      "schedule": "0 7 * * *"
     }
   ]
 }

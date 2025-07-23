@@ -17,6 +17,7 @@ const navigation = [
   { name: 'Forecasts', href: '/forecasts', description: 'View demand forecasting and predictions' },
   { name: 'Alerts', href: '/alerts', description: 'Check low stock and expiry alerts' },
   { name: 'Orders', href: '/orders', description: 'Manage purchase orders and deliveries' },
+  { name: 'Reports', href: '/reports', description: 'View comprehensive daily analytics and ML performance reports' },
 ]
 
 function AlertNotificationWrapper() {
@@ -69,8 +70,8 @@ function NavigationClient({ children }: { children: React.ReactNode }) {
             className={cn(
               "flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors",
               isActive
-                ? "bg-accent text-accent-foreground"
-                : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                ? "bg-sidebar-accent text-sidebar-accent-foreground border-l-2 border-sidebar-primary"
+                : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
             )}
             aria-current={isActive ? 'page' : undefined}
             aria-label={item.description}
@@ -86,11 +87,11 @@ function NavigationClient({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen bg-background">
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex w-64 border-r bg-card flex-col" role="navigation" aria-label="Main navigation">
-        <div className="flex h-16 items-center border-b px-6">
-          <h1 className="text-xl font-semibold tracking-tight">Pharma Inventory</h1>
+      <aside className="hidden lg:flex w-64 border-r bg-sidebar shadow-soft flex-col" role="navigation" aria-label="Main navigation">
+        <div className="flex h-16 items-center border-b border-sidebar-border px-6">
+          <h1 className="text-xl font-semibold tracking-tight text-sidebar-foreground">Pharma Inventory</h1>
         </div>
-        <nav className="flex-1 space-y-2 p-4">
+        <nav className="flex-1 space-y-1 p-4">
           <NavigationItems />
         </nav>
       </aside>
@@ -98,7 +99,7 @@ function NavigationClient({ children }: { children: React.ReactNode }) {
       {/* Main content */}
       <div className="flex-1">
         {/* Top header with alerts */}
-        <header className="border-b bg-background">
+        <header className="border-b bg-card shadow-soft sticky top-0 z-40 backdrop-blur supports-[backdrop-filter]:bg-card/80">
           <div className="flex h-16 items-center justify-between px-4 lg:px-6">
             <div className="flex items-center gap-4">
               {/* Mobile Navigation */}
@@ -109,11 +110,11 @@ function NavigationClient({ children }: { children: React.ReactNode }) {
                     <span className="sr-only">Toggle navigation</span>
                   </Button>
                 </SheetTrigger>
-                <SheetContent side="left" className="w-64 p-0">
-                  <div className="flex h-16 items-center border-b px-6">
-                    <h1 className="text-xl font-semibold tracking-tight">Pharma Inventory</h1>
+                <SheetContent side="left" className="w-64 p-0 bg-sidebar">
+                  <div className="flex h-16 items-center border-b border-sidebar-border px-6">
+                    <h1 className="text-xl font-semibold tracking-tight text-sidebar-foreground">Pharma Inventory</h1>
                   </div>
-                  <nav className="space-y-2 p-4">
+                  <nav className="space-y-1 p-4">
                     <NavigationItems />
                   </nav>
                 </SheetContent>
@@ -128,7 +129,11 @@ function NavigationClient({ children }: { children: React.ReactNode }) {
             </div>
           </div>
         </header>
-        <main className="p-4 lg:p-6">{children}</main>
+        <main className="section-spacing px-4 lg:px-6">
+          <div className="content-spacing max-w-7xl mx-auto">
+            {children}
+          </div>
+        </main>
       </div>
     </div>
   )
