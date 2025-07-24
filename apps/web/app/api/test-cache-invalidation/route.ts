@@ -22,7 +22,7 @@ export async function POST(request: Request) {
       console.log('Initial state:', {
         inventory: initialInventory.find(item => item.drugId === drugId),
         alerts: initialAlerts,
-        forecasts: initialForecasts?.forecasts?.find(f => f.drug_id === drugId)
+        forecasts: initialForecasts && !('error' in initialForecasts) ? initialForecasts.forecasts?.find(f => f.drug_id === drugId) : null
       })
       
       // 2. Update stock (this should trigger alerts automatically)
@@ -42,7 +42,7 @@ export async function POST(request: Request) {
       const newForecasts = await getAllForecasts()
       
       const drugInventory = newInventory.find(item => item.drugId === drugId)
-      const drugForecast = newForecasts?.forecasts?.find(f => f.drug_id === drugId)
+      const drugForecast = newForecasts && !('error' in newForecasts) ? newForecasts.forecasts?.find(f => f.drug_id === drugId) : null
       
       console.log('New state:', {
         inventory: drugInventory,
@@ -54,7 +54,7 @@ export async function POST(request: Request) {
       const realTimeVerification = {
         stockUpdated: drugInventory?.currentStock !== initialInventory.find(item => item.drugId === drugId)?.currentStock,
         alertsUpdated: newAlerts.total !== initialAlerts.total,
-        forecastsUpdated: drugForecast?.current_stock !== initialForecasts?.forecasts?.find(f => f.drug_id === drugId)?.current_stock,
+        forecastsUpdated: drugForecast?.current_stock !== (initialForecasts && !('error' in initialForecasts) ? initialForecasts.forecasts?.find(f => f.drug_id === drugId)?.current_stock : null),
         stockStatus: drugInventory?.stockStatus,
         newCurrentStock: drugInventory?.currentStock,
         alertCount: newAlerts.total
@@ -83,7 +83,7 @@ export async function POST(request: Request) {
       const forecasts = await getAllForecasts()
       
       const drugInventory = inventory.find(item => item.drugId === drugId)
-      const drugForecast = forecasts?.forecasts?.find(f => f.drug_id === drugId)
+      const drugForecast = forecasts && !('error' in forecasts) ? forecasts.forecasts?.find(f => f.drug_id === drugId) : null
       
       return NextResponse.json({
         success: true,

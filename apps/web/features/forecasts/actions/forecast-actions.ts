@@ -23,8 +23,15 @@ interface AllForecastsResponse {
   generated_at: string
 }
 
-// No caching - always fetch fresh data for real-time accuracy
-async function fetchAllForecasts(): Promise<AllForecastsResponse | null> {
+interface MLServiceError {
+  error: true
+  message: string
+  status?: number
+  timestamp: string
+}
+
+// Fallback strategy: try bulk endpoint first, then individual forecasts
+async function fetchAllForecasts(): Promise<AllForecastsResponse | MLServiceError | null> {
   const ML_SERVICE_URL = process.env.ML_SERVICE_URL || 'https://pharma-inventory-production.up.railway.app'
   const ML_API_KEY = process.env.ML_API_KEY || 'ml-service-dev-key-2025'
 
@@ -33,7 +40,10 @@ async function fetchAllForecasts(): Promise<AllForecastsResponse | null> {
     return null
   }
 
+  // Try bulk endpoint first
   try {
+    console.log(`🔗 Attempting bulk forecast from: ${ML_SERVICE_URL}/forecast/all`)
+    
     const response = await fetch(`${ML_SERVICE_URL}/forecast/all`, {
       method: 'POST',
       headers: {
@@ -41,23 +51,107 @@ async function fetchAllForecasts(): Promise<AllForecastsResponse | null> {
         'X-API-Key': ML_API_KEY,
       },
       body: JSON.stringify({ days: 7 }),
-      // Don't cache at fetch level, we handle caching above
-      cache: 'no-store'
+      cache: 'no-store',
+      signal: AbortSignal.timeout(15000) // Reduced timeout for bulk
     })
 
-    if (!response.ok) {
-      console.error('ML service error:', response.status, response.statusText)
-      return null
+    console.log(`📡 Bulk forecast response: ${response.status} ${response.statusText}`)
+
+    if (response.ok) {
+      const data = await response.json()
+      console.log(`✅ Bulk forecast successful: ${data.forecasts?.length || 0} forecasts`)
+      return data
     }
 
-    const data = await response.json()
-    return data
+    console.warn(`⚠️ Bulk forecast failed with ${response.status}, trying individual forecasts...`)
+    
   } catch (error) {
-    console.error('Failed to fetch forecasts:', error)
-    return null
+    console.warn('⚠️ Bulk forecast failed, trying individual forecasts...', error instanceof Error ? error.message : error)
+  }
+
+  // Fallback: fetch individual forecasts
+  try {
+    console.log(`🔄 Fallback: Fetching individual forecasts`)
+    
+    // Get drug list from database
+    const { db } = await import('@/lib/db')
+    const { drugs } = await import('@workspace/database')
+    const drugList = await db.select().from(drugs)
+    
+    console.log(`📋 Found ${drugList.length} drugs to forecast`)
+    
+    const forecasts: DrugForecast[] = []
+    const errors: string[] = []
+    
+    // Fetch forecasts for each drug individually
+    for (const drug of drugList) {
+      try {
+        const response = await fetch(`${ML_SERVICE_URL}/forecast/${drug.id}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-API-Key': ML_API_KEY,
+          },
+          body: JSON.stringify({ days: 7 }),
+          cache: 'no-store',
+          signal: AbortSignal.timeout(10000)
+        })
+
+        if (response.ok) {
+          const forecast = await response.json()
+          forecasts.push(forecast)
+          console.log(`✅ Individual forecast for ${drug.name}: OK`)
+        } else {
+          errors.push(`${drug.name}: ${response.status}`)
+          console.warn(`❌ Individual forecast for ${drug.name}: ${response.status}`)
+        }
+      } catch (error) {
+        errors.push(`${drug.name}: ${error instanceof Error ? error.message : 'Unknown error'}`)
+        console.warn(`❌ Individual forecast for ${drug.name}:`, error)
+      }
+    }
+
+    if (forecasts.length === 0) {
+      return { 
+        error: true, 
+        message: `All individual forecasts failed. Errors: ${errors.join(', ')}`,
+        timestamp: new Date().toISOString()
+      }
+    }
+
+    if (errors.length > 0) {
+      console.warn(`⚠️ Some individual forecasts failed: ${errors.join(', ')}`)
+    }
+
+    console.log(`✅ Individual forecasts successful: ${forecasts.length}/${drugList.length} drugs`)
+    
+    return {
+      forecasts,
+      generated_at: new Date().toISOString()
+    }
+    
+  } catch (error) {
+    let errorMessage = 'Failed to fetch forecasts using both bulk and individual methods'
+    
+    if (error instanceof Error) {
+      if (error.name === 'AbortError') {
+        errorMessage = 'Individual forecast requests timed out - service may be overloaded'
+      } else if (error.message.includes('fetch')) {
+        errorMessage = 'Network error connecting to ML service - service may be down'
+      } else {
+        errorMessage = `Individual forecast error: ${error.message}`
+      }
+    }
+    
+    console.error('❌ All forecast methods failed:', errorMessage, error)
+    return { 
+      error: true, 
+      message: errorMessage,
+      timestamp: new Date().toISOString()
+    }
   }
 }
 
-export async function getAllForecasts(): Promise<AllForecastsResponse | null> {
+export async function getAllForecasts(): Promise<AllForecastsResponse | MLServiceError | null> {
   return fetchAllForecasts()
 }
