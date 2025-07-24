@@ -17,6 +17,11 @@ async function ForecastsContent() {
     return <MLServiceError />
   }
 
+  // Handle error responses from the enhanced error handling
+  if ('error' in data && data.error) {
+    return <MLServiceError message={data.message} timestamp={data.timestamp} />
+  }
+
   // Group forecasts by status
   const critical = data.forecasts.filter(f => 
     f.recommendation.includes('URGENT') || f.recommendation.includes('Critical')

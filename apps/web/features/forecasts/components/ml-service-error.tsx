@@ -4,7 +4,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@work
 import { Button } from '@workspace/ui/components/button'
 import { AlertCircle, RefreshCw, Settings } from 'lucide-react'
 
-export function MLServiceError() {
+interface MLServiceErrorProps {
+  message?: string
+  timestamp?: string
+}
+
+export function MLServiceError({ 
+  message = "Unable to fetch demand forecasts. The ML service may be offline or misconfigured.",
+  timestamp 
+}: MLServiceErrorProps = {}) {
   return (
     <Card className="border-red-200 bg-red-50">
       <CardHeader>
@@ -13,17 +21,23 @@ export function MLServiceError() {
           ML Service Unavailable
         </CardTitle>
         <CardDescription className="text-red-700">
-          Unable to fetch demand forecasts. The ML service may be offline or misconfigured.
+          {message}
+          {timestamp && (
+            <div className="text-xs mt-1 opacity-75">
+              Error occurred at: {new Date(timestamp).toLocaleString()}
+            </div>
+          )}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2 text-sm text-red-800">
           <p>Possible causes:</p>
           <ul className="list-disc pl-5 space-y-1">
-            <li>ML service is not running on port 8000</li>
-            <li>API key is incorrect or missing</li>
-            <li>Network connection issues</li>
-            <li>Service is overloaded or timing out</li>
+            <li>ML service bulk forecast endpoint is experiencing issues</li>
+            <li>Service models may be loading or restarting</li>
+            <li>API request timeout (requests taking longer than 30 seconds)</li>
+            <li>Network connection issues or service overload</li>
+            <li>Invalid API key or missing authentication</li>
           </ul>
         </div>
         
