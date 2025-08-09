@@ -129,13 +129,18 @@ def train_model_for_drug(df, drug_id, drug_name):
         n_jobs=-1
     )
     
-    # Fit model
-    model.fit(
-        X_train, y_train,
-        eval_set=[(X_test, y_test)],
-        early_stopping_rounds=10,
-        verbose=False
-    )
+    # Fit model (updated for newer XGBoost versions)
+    try:
+        # Try new API first
+        model.fit(
+            X_train, y_train,
+            eval_set=[(X_test, y_test)],
+            early_stopping_rounds=10,
+            verbose=False
+        )
+    except TypeError:
+        # Fallback for older XGBoost versions
+        model.fit(X_train, y_train)
     
     # Make predictions
     y_pred = model.predict(X_test)

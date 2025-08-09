@@ -7,15 +7,26 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@work
 import { Badge } from '@workspace/ui/components/badge'
 import { Brain, TrendingUp, AlertTriangle, CheckCircle } from 'lucide-react'
 
+// Type guard to check if data is a successful forecast response
+function isSuccessfulForecastResponse(data: any): data is { forecasts: any[]; generated_at: string } {
+  return data && !('error' in data) && 'forecasts' in data
+}
+
 // Force dynamic rendering - no caching for real-time forecasts
 export const dynamic = 'force-dynamic'
 
 async function ForecastsContent() {
   const data = await getAllForecasts()
 
-  if (!data) {
-    return <MLServiceError />
+  // Use type guard to handle errors and ensure type safety
+  if (!isSuccessfulForecastResponse(data)) {
+    const errorProps = data && 'error' in data ? 
+      { message: data.message, timestamp: data.timestamp } : 
+      {}
+    return <MLServiceError {...errorProps} />
   }
+
+  // Now TypeScript knows data has forecasts and generated_at properties
 
   // Group forecasts by status
   const critical = data.forecasts.filter(f => 

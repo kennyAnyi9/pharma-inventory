@@ -61,6 +61,17 @@ apps/ml-service/models/forecast_*.png
 **/simple_test.py
 **/test_performance.py
 
+# Database migration and fix scripts (one-time use, contain sensitive info)
+clean_reset.py
+debug_ml_db.py
+fix_drug_ids.sql
+run_fix.py
+simple_fix.py
+direct_fix.py
+
+# ML service generated files
+apps/ml-service/models/training_metrics.json
+
 # Documentation files
 *.md
 !README.md
