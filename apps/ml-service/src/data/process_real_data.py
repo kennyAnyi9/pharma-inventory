@@ -161,25 +161,21 @@ class RealDataProcessor:
                 # Process each drug column for this patient visit
                 for drug_csv in drug_cols:
                     if drug_csv in self.drug_mapping:
-                        # Get quantity used
-                        quantity_str = str(row[drug_csv]).strip()
-                        if quantity_str and quantity_str != '' and quantity_str != 'nan':
-                            try:
-                                quantity = float(quantity_str)
-                                if quantity > 0:
-                                    has_drug_data = True
-                                    # Convert dosage if needed
-                                    adjusted_quantity = self._convert_dosage_equivalent(drug_csv, quantity)
-                                    
-                                    processed_data.append({
-                                        'date': current_date.date(),
-                                        'drug_name_standard': self.drug_mapping[drug_csv],
-                                        'drug_name_csv': drug_csv,
-                                        'quantity_used': adjusted_quantity,
-                                        'source_file': os.path.basename(filepath)
-                                    })
-                            except ValueError:
-                                continue  # Skip non-numeric values
+                        # Get quantity used with robust numeric parsing
+                        quantity = pd.to_numeric(row[drug_csv], errors='coerce')
+                        
+                        if pd.notna(quantity) and quantity > 0:
+                            has_drug_data = True
+                            # Convert dosage if needed
+                            adjusted_quantity = self._convert_dosage_equivalent(drug_csv, quantity)
+                            
+                            processed_data.append({
+                                'date': current_date.date(),
+                                'drug_name_standard': self.drug_mapping[drug_csv],
+                                'drug_name_csv': drug_csv,
+                                'quantity_used': adjusted_quantity,
+                                'source_file': os.path.basename(filepath)
+                            })
                 
                 # If no drug data found in this row, it might be end of date section
                 if not has_drug_data:
@@ -220,7 +216,7 @@ class RealDataProcessor:
         return daily_consumption
     
     def fill_missing_dates(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Fill in missing dates with zero consumption"""
+        """Fill in missing dates with zero consumption using vectorized operations"""
         print("Filling missing dates...")
         
         # Get date range
@@ -231,24 +227,23 @@ class RealDataProcessor:
         # Get all drugs
         all_drugs = df['drug_name'].unique()
         
-        # Create complete date-drug combinations
-        complete_data = []
-        for date in all_dates:
-            for drug in all_drugs:
-                existing = df[(df['date'] == date) & (df['drug_name'] == drug)]
-                if not existing.empty:
-                    # Use existing data
-                    complete_data.append(existing.iloc[0].to_dict())
-                else:
-                    # Fill with zero
-                    complete_data.append({
-                        'date': date,
-                        'drug_name': drug,
-                        'quantity_used': 0,
-                        'source_file': 'filled'
-                    })
+        # Create complete MultiIndex from cartesian product of dates and drugs
+        complete_index = pd.MultiIndex.from_product(
+            [all_dates, all_drugs], 
+            names=['date', 'drug_name']
+        )
         
-        return pd.DataFrame(complete_data)
+        # Set MultiIndex on original DataFrame
+        df_indexed = df.set_index(['date', 'drug_name'])
+        
+        # Reindex to complete MultiIndex, filling missing values
+        complete_df = df_indexed.reindex(complete_index, fill_value=0)
+        
+        # Fill missing source_file values
+        complete_df['source_file'] = complete_df['source_file'].fillna('filled')
+        
+        # Reset index to get back to regular DataFrame
+        return complete_df.reset_index()
     
     def validate_data(self, df: pd.DataFrame) -> Tuple[pd.DataFrame, Dict]:
         """Validate and clean the processed data"""

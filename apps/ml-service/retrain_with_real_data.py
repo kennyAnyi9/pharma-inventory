@@ -49,56 +49,59 @@ def insert_real_data_to_db(df):
             """))
             print("✅ Cleared old historical data")
             
-            # Insert real consumption data
+            # Pre-fetch all reorder levels once to avoid repeated DB queries
+            reorder_levels = {}
+            result = conn.execute(text("SELECT id, reorder_level FROM drugs"))
+            for drug_id, reorder_level in result.fetchall():
+                reorder_levels[drug_id] = reorder_level or 100  # Default to 100 if None
+            
+            # Insert real consumption data with realistic stock tracking
             records_inserted = 0
             
-            for _, record in df.iterrows():
-                # Get reorder level for this drug
-                result = conn.execute(text("""
-                    SELECT reorder_level FROM drugs WHERE id = :drug_id
-                """), {'drug_id': int(record['drug_id'])})
+            # Group by drug_id and process each drug separately to maintain stock continuity
+            for drug_id, drug_df in df.groupby('drug_id'):
+                # Initialize starting stock for this drug
+                reorder_level = reorder_levels.get(drug_id, 100)
+                current_stock = reorder_level * 2  # Start with 2x reorder level
                 
-                reorder_level = result.fetchone()
-                if not reorder_level:
-                    continue
+                # Process records for this drug in chronological order
+                for _, record in drug_df.sort_values('date').iterrows():
+                    opening_stock = current_stock
+                    quantity_used = int(record['quantity_used'])
                     
-                reorder_level = reorder_level[0]
-                
-                # Simulate realistic inventory levels
-                # Start with 2x reorder level, simulate stock management
-                opening_stock = max(0, reorder_level * 2)
-                quantity_used = int(record['quantity_used'])
-                
-                # Random receiving when stock gets low (simplified)
-                quantity_received = 0
-                if opening_stock <= reorder_level:
-                    quantity_received = reorder_level * 3
-                
-                closing_stock = max(0, opening_stock + quantity_received - quantity_used)
-                stockout_flag = closing_stock == 0
-                
-                # Insert inventory record (without ON CONFLICT to avoid constraint issues)
-                conn.execute(text("""
-                    INSERT INTO inventory (
-                        drug_id, date, opening_stock, quantity_received,
-                        quantity_used, quantity_expired, closing_stock,
-                        stockout_flag, created_at, updated_at
-                    ) VALUES (
-                        :drug_id, :date, :opening_stock, :quantity_received,
-                        :quantity_used, 0, :closing_stock,
-                        :stockout_flag, NOW(), NOW()
-                    )
-                """), {
-                    'drug_id': int(record['drug_id']),
-                    'date': record['date'].date(),
-                    'opening_stock': opening_stock,
-                    'quantity_received': quantity_received,
-                    'quantity_used': quantity_used,
-                    'closing_stock': closing_stock,
-                    'stockout_flag': stockout_flag
-                })
-                
-                records_inserted += 1
+                    # Simulate restocking when stock gets low
+                    quantity_received = 0
+                    if current_stock <= reorder_level:
+                        quantity_received = reorder_level * 3  # Restock to 3x reorder level
+                    
+                    closing_stock = max(0, opening_stock + quantity_received - quantity_used)
+                    stockout_flag = closing_stock == 0
+                    
+                    # Update current stock for next iteration
+                    current_stock = closing_stock
+                    
+                    # Insert inventory record (without ON CONFLICT to avoid constraint issues)
+                    conn.execute(text("""
+                        INSERT INTO inventory (
+                            drug_id, date, opening_stock, quantity_received,
+                            quantity_used, quantity_expired, closing_stock,
+                            stockout_flag, created_at, updated_at
+                        ) VALUES (
+                            :drug_id, :date, :opening_stock, :quantity_received,
+                            :quantity_used, 0, :closing_stock,
+                            :stockout_flag, NOW(), NOW()
+                        )
+                    """), {
+                        'drug_id': int(record['drug_id']),
+                        'date': record['date'].date(),
+                        'opening_stock': opening_stock,
+                        'quantity_received': quantity_received,
+                        'quantity_used': quantity_used,
+                        'closing_stock': closing_stock,
+                        'stockout_flag': stockout_flag
+                    })
+                    
+                    records_inserted += 1
             
             print(f"✅ Inserted {records_inserted} real consumption records")
             
