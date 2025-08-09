@@ -1,15 +1,18 @@
 import pandas as pd
-import numpy as np
-from datetime import datetime, timedelta
-import re
-from typing import Dict, List, Tuple
+from datetime import datetime
+from typing import Dict, Tuple
 from sqlalchemy import create_engine, text
 import os
 import sys
 
-# Add parent directory to path for imports
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from config import DATABASE_URL
+# Import DATABASE_URL with fallback to environment variable
+try:
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from config import DATABASE_URL
+except ImportError:
+    DATABASE_URL = os.getenv("DATABASE_URL")
+    if not DATABASE_URL:
+        raise RuntimeError("DATABASE_URL not configured. Set env var or ensure config module is importable.")
 
 class RealDataProcessor:
     """Process real consumption CSV data for ML model training"""
@@ -138,8 +141,6 @@ class RealDataProcessor:
         
         # Get column names
         date_col = df.columns[0]
-        opd_col = df.columns[1] if len(df.columns) > 1 else None
-        sex_col = df.columns[2] if len(df.columns) > 2 else None
         drug_cols = df.columns[3:]
         
         processed_data = []
@@ -219,7 +220,7 @@ class RealDataProcessor:
         """Fill in missing dates with zero consumption using vectorized operations"""
         print("Filling missing dates...")
         
-        # Get date range
+        # Get date range as full DatetimeIndex
         min_date = df['date'].min()
         max_date = df['date'].max()
         all_dates = pd.date_range(min_date, max_date).date
@@ -236,14 +237,20 @@ class RealDataProcessor:
         # Set MultiIndex on original DataFrame
         df_indexed = df.set_index(['date', 'drug_name'])
         
-        # Reindex to complete MultiIndex, filling missing values
-        complete_df = df_indexed.reindex(complete_index, fill_value=0)
+        # Reindex to complete MultiIndex without fill_value to preserve dtypes
+        complete_df = df_indexed.reindex(complete_index)
         
-        # Fill missing source_file values
+        # Explicitly fill numeric columns with 0
+        complete_df['quantity_used'] = complete_df['quantity_used'].fillna(0)
+        
+        # Fill non-numeric columns appropriately
         complete_df['source_file'] = complete_df['source_file'].fillna('filled')
         
-        # Reset index to get back to regular DataFrame
-        return complete_df.reset_index()
+        # Reset index and ensure proper date dtype
+        result = complete_df.reset_index()
+        result['date'] = pd.to_datetime(result['date']).dt.date
+        
+        return result
     
     def validate_data(self, df: pd.DataFrame) -> Tuple[pd.DataFrame, Dict]:
         """Validate and clean the processed data"""
@@ -267,7 +274,7 @@ class RealDataProcessor:
         # Remove extreme outliers (> 500 units per day per drug)
         df_cleaned = df[df['quantity_used'] <= 500].copy()
         
-        print(f"Validation complete:")
+        print("Validation complete:")
         print(f"- Total records: {validation_report['total_records']}")
         print(f"- Date range: {validation_report['date_range'][0]} to {validation_report['date_range'][1]}")
         print(f"- Drugs: {len(validation_report['drugs_found'])}")
@@ -372,17 +379,17 @@ def main():
         print(f"\n✅ Processed data saved to: {output_file}")
         
         # Display summary
-        print(f"\n=== FINAL SUMMARY ===")
+        print("\n=== FINAL SUMMARY ===")
         print(f"Date range: {ml_ready_df['date'].min().date()} to {ml_ready_df['date'].max().date()}")
         print(f"Total days: {ml_ready_df['date'].nunique()}")
         print(f"Drugs covered: {ml_ready_df['drug_id'].nunique()}")
         print(f"Total consumption: {ml_ready_df['quantity_used'].sum():,.0f} units")
         
-        print(f"\nConsumption by drug:")
+        print("\nConsumption by drug:")
         drug_summary = ml_ready_df.groupby('drug_name')['quantity_used'].agg(['sum', 'mean', 'std']).round(2)
         print(drug_summary)
         
-        print(f"\n🎯 Ready for model retraining!")
+        print("\n🎯 Ready for model retraining!")
         
     except Exception as e:
         print(f"\n❌ Error processing data: {str(e)}")

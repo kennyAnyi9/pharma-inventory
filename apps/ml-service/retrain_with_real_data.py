@@ -6,14 +6,38 @@ Retrain ML models using real consumption data instead of synthetic data
 import pandas as pd
 import numpy as np
 import os
+import re
 import sys
 from datetime import datetime
 from sqlalchemy import create_engine, text
 
-# Add src directory to path
-sys.path.append('src')
-from config import DATABASE_URL
-from models.train import retrain_models_with_recent_data
+# Import configuration with fallback to environment variables
+try:
+    sys.path.append('src')
+    from config import DATABASE_URL
+except ImportError:
+    DATABASE_URL = os.getenv("DATABASE_URL")
+    if not DATABASE_URL:
+        raise RuntimeError("DATABASE_URL not configured. Set env var or ensure config module is importable.")
+
+try:
+    from models.train import retrain_models_with_recent_data
+except ImportError:
+    # Fallback for import issues
+    import sys
+    sys.path.append('src')
+    from models.train import retrain_models_with_recent_data
+
+def sanitize_drug_name(drug_name: str) -> str:
+    """Sanitize drug name for safe file path usage"""
+    # Replace unsafe characters with underscores
+    sanitized = re.sub(r'[<>:"/\\|?*\s]+', '_', drug_name)
+    # Remove consecutive underscores
+    sanitized = re.sub(r'_+', '_', sanitized)
+    # Remove leading/trailing underscores
+    sanitized = sanitized.strip('_')
+    # Convert to lowercase for consistency
+    return sanitized.lower()
 
 def load_real_data():
     """Load the processed real consumption data"""
@@ -156,7 +180,8 @@ def validate_improved_models():
             actual_consumption = recent_data['quantity_used'].tolist()
             
             # Make prediction for these days (simulate)
-            model_file = f"models/trained/model_{drug_id}_{drug_name.replace(' ', '_').lower()}.pkl"
+            sanitized_name = sanitize_drug_name(drug_name)
+            model_file = f"models/trained/model_{drug_id}_{sanitized_name}.pkl"
             
             if os.path.exists(model_file):
                 # Load model and predict
@@ -175,7 +200,7 @@ def validate_improved_models():
                 
                 print(f"✅ {drug_name}: Predicted={predicted_avg:.1f}, Actual={actual_avg:.1f}, Accuracy={accuracy:.2%}")
             else:
-                print(f"⚠️  Model file not found for {drug_name}")
+                print(f"⚠️  Model file not found for {drug_name} (looked for: {model_file})")
                 
         except Exception as e:
             print(f"❌ Validation error for {drug_name}: {e}")
@@ -242,7 +267,7 @@ def main():
         successful, failed = retrain_all_models()
         
         # Step 4: Validate improvements
-        validation_results = validate_improved_models()
+        validate_improved_models()
         
         # Step 5: Generate report
         generate_retraining_report()
