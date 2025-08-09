@@ -351,9 +351,8 @@ class RealDataProcessor:
         
         # Ensure proper data types
         df['date'] = pd.to_datetime(df['date'])
-        df['quantity_used'] = df['quantity_used'].astype(int)
+        df['quantity_used'] = df['quantity_used'].round().astype(int)
         df['drug_id'] = df['drug_id'].astype(int)
-        
         # Sort by drug and date
         df = df.sort_values(['drug_id', 'date']).reset_index(drop=True)
         
