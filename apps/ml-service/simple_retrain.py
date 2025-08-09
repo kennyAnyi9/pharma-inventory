@@ -6,10 +6,9 @@ Simple script to test model retraining with existing data
 import sys
 import os
 
-# Add src directory to path
-sys.path.append('src')
+# Add src directory to path (file-relative)
+sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
 from models.train import retrain_models_with_recent_data
-
 def main():
     """Simple retraining test"""
     print("🚀 Testing Model Retraining with Current Data")
