@@ -38,14 +38,31 @@ def deploy_real_data_fast():
         with engine.begin() as conn:
             print("🗑️  Clearing old historical data...")
             
-            # Clear historical data (keep only current/future dates)
+            # Get date range from the dataframe we're about to insert
+            min_date = df['date'].min()
+            max_date = df['date'].max()
+            
+            # Safely clear only the specific date range we're replacing
             result = conn.execute(text("""
                 DELETE FROM inventory 
-                WHERE date < CURRENT_DATE
-            """))
+                WHERE date >= :min_date AND date <= :max_date
+            """), {
+                'min_date': min_date,
+                'max_date': max_date
+            })
             
             deleted_count = result.rowcount
-            print(f"   ✅ Deleted {deleted_count} old records")
+            print(f"   ✅ Deleted {deleted_count} records for date range: {min_date} to {max_date}")
+            
+            # Ensure unique index exists for UPSERT operations
+            try:
+                conn.execute(text("""
+                    CREATE UNIQUE INDEX IF NOT EXISTS idx_inventory_drug_date 
+                    ON inventory (drug_id, date)
+                """))
+                print("   ✅ Ensured unique index on (drug_id, date) exists")
+            except Exception as e:
+                print(f"   ⚠️  Index creation note: {e}")
             
             print("📥 Inserting real consumption data...")
             
@@ -99,19 +116,47 @@ def deploy_real_data_fast():
             insert_df['created_at'] = datetime.now()
             insert_df['updated_at'] = datetime.now()
             
-            # Insert in batches
-            batch_size = 100
+            # Insert with UPSERT logic using individual statements for better control
             total_inserted = 0
             
-            for i in range(0, len(insert_df), batch_size):
-                batch = insert_df[i:i+batch_size]
-                batch.to_sql('inventory', conn, if_exists='append', index=False)
-                total_inserted += len(batch)
+            for _, row in insert_df.iterrows():
+                conn.execute(text("""
+                    INSERT INTO inventory (
+                        drug_id, date, opening_stock, quantity_received,
+                        quantity_used, quantity_expired, closing_stock,
+                        stockout_flag, created_at, updated_at
+                    ) VALUES (
+                        :drug_id, :date, :opening_stock, :quantity_received,
+                        :quantity_used, :quantity_expired, :closing_stock,
+                        :stockout_flag, :created_at, :updated_at
+                    )
+                    ON CONFLICT (drug_id, date) 
+                    DO UPDATE SET
+                        opening_stock = EXCLUDED.opening_stock,
+                        quantity_received = EXCLUDED.quantity_received,
+                        quantity_used = EXCLUDED.quantity_used,
+                        closing_stock = EXCLUDED.closing_stock,
+                        stockout_flag = EXCLUDED.stockout_flag,
+                        updated_at = EXCLUDED.updated_at
+                """), {
+                    'drug_id': int(row['drug_id']),
+                    'date': row['date'],
+                    'opening_stock': int(row['opening_stock']),
+                    'quantity_received': int(row['quantity_received']),
+                    'quantity_used': int(row['quantity_used']),
+                    'quantity_expired': int(row['quantity_expired']),
+                    'closing_stock': int(row['closing_stock']),
+                    'stockout_flag': bool(row['stockout_flag']),
+                    'created_at': row['created_at'],
+                    'updated_at': row['updated_at']
+                })
+                
+                total_inserted += 1
                 
                 if total_inserted % 200 == 0:
-                    print(f"   📥 Inserted {total_inserted}/{len(insert_df)} records...")
+                    print(f"   📥 Processed {total_inserted}/{len(insert_df)} records...")
             
-            print(f"   ✅ Successfully inserted {total_inserted} records")
+            print(f"   ✅ Successfully processed {total_inserted} records (inserts/updates)")
             
         # Verify insertion
         with engine.connect() as conn:

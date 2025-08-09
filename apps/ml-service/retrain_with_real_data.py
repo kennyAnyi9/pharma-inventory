@@ -66,12 +66,30 @@ def insert_real_data_to_db(df):
     
     try:
         with engine.begin() as conn:
-            # Clear existing historical data
-            conn.execute(text("""
+            # Get date range from the dataframe we're about to insert
+            min_date = df['date'].min()
+            max_date = df['date'].max()
+            
+            # Safely clear only the specific date range we're replacing
+            result = conn.execute(text("""
                 DELETE FROM inventory 
-                WHERE date < CURRENT_DATE - INTERVAL '1 day'
-            """))
-            print("✅ Cleared old historical data")
+                WHERE date >= :min_date AND date <= :max_date
+            """), {
+                'min_date': min_date,
+                'max_date': max_date
+            })
+            
+            print(f"✅ Cleared historical data for date range: {min_date} to {max_date} ({result.rowcount} records)")
+            
+            # Ensure unique index exists for UPSERT operations
+            try:
+                conn.execute(text("""
+                    CREATE UNIQUE INDEX IF NOT EXISTS idx_inventory_drug_date 
+                    ON inventory (drug_id, date)
+                """))
+                print("✅ Ensured unique index on (drug_id, date) exists")
+            except Exception as e:
+                print(f"⚠️  Index creation note: {e}")
             
             # Pre-fetch all reorder levels once to avoid repeated DB queries
             reorder_levels = {}
@@ -104,7 +122,7 @@ def insert_real_data_to_db(df):
                     # Update current stock for next iteration
                     current_stock = closing_stock
                     
-                    # Insert inventory record (without ON CONFLICT to avoid constraint issues)
+                    # Insert inventory record with UPSERT to handle duplicates
                     conn.execute(text("""
                         INSERT INTO inventory (
                             drug_id, date, opening_stock, quantity_received,
@@ -115,6 +133,14 @@ def insert_real_data_to_db(df):
                             :quantity_used, 0, :closing_stock,
                             :stockout_flag, NOW(), NOW()
                         )
+                        ON CONFLICT (drug_id, date) 
+                        DO UPDATE SET
+                            opening_stock = EXCLUDED.opening_stock,
+                            quantity_received = EXCLUDED.quantity_received,
+                            quantity_used = EXCLUDED.quantity_used,
+                            closing_stock = EXCLUDED.closing_stock,
+                            stockout_flag = EXCLUDED.stockout_flag,
+                            updated_at = NOW()
                     """), {
                         'drug_id': int(record['drug_id']),
                         'date': record['date'].date(),
