@@ -89,6 +89,7 @@ export default function DrugLogsPage() {
   // Fetch drug-specific activity
   const fetchDrugActivity = async (drugId: number) => {
     setLoading(true)
+    let errorOccurred = false
     try {
       const response = await fetch(`/api/drug-activity?drugId=${drugId}&limit=100`)
       if (response.ok) {
@@ -97,12 +98,18 @@ export default function DrugLogsPage() {
       } else {
         console.error('Failed to fetch drug activity')
         setActivities([])
+        errorOccurred = true
       }
     } catch (error) {
       console.error('Error fetching drug activity:', error)
       setActivities([])
+      errorOccurred = true
     } finally {
       setLoading(false)
+      if (errorOccurred) {
+        // Consider adding a toast notification or error state
+        // to inform the user about the failure
+      }
     }
   }
 
