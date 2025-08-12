@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { drugs, inventory, reorderCalculations } from '@workspace/database'
 import { eq, desc, and, sql, gte, lte } from 'drizzle-orm'
+import { getEffectiveReorderLevel } from '@/lib/reorder-level-utils'
 
 export const dynamic = 'force-dynamic'
 
@@ -354,6 +355,7 @@ async function getStockAnalysis() {
         currentStock: inventory.closingStock,
         reorderLevel: drugs.reorderLevel,
         calculatedReorderLevel: drugs.calculatedReorderLevel,
+        intelligentReorderLevel: reorderCalculations.intelligentReorderLevel,
         unit: drugs.unit,
         category: drugs.category
       })
@@ -365,13 +367,27 @@ async function getStockAnalysis() {
           eq(inventory.date, sql`(SELECT MAX(date) FROM inventory WHERE drug_id = ${drugs.id})`)
         )
       )
+      .leftJoin(
+        reorderCalculations,
+        and(
+          eq(drugs.id, reorderCalculations.drugId),
+          eq(
+            reorderCalculations.calculationDate,
+            sql`(SELECT MAX(calculation_date) FROM reorder_calculations WHERE drug_id = ${drugs.id})`
+          )
+        )
+      )
       .orderBy(drugs.name)
     
     let critical = 0, low = 0, normal = 0, good = 0
     
     const analysis = stockStatus.map(item => {
       const currentStock = item.currentStock || 0
-      const reorderLevel = item.calculatedReorderLevel || item.reorderLevel || 100
+      const reorderLevel = getEffectiveReorderLevel({
+        intelligentReorderLevel: item.intelligentReorderLevel,
+        calculatedReorderLevel: item.calculatedReorderLevel,
+        reorderLevel: item.reorderLevel
+      })
       
       let status: string
       if (currentStock === 0) status = 'critical'

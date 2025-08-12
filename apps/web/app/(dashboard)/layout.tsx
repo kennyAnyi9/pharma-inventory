@@ -14,10 +14,9 @@ import { Menu, X } from 'lucide-react'
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', description: 'View pharmacy dashboard overview' },
   { name: 'Inventory', href: '/inventory', description: 'Manage drug inventory and stock levels' },
-  { name: 'Forecasts', href: '/forecasts', description: 'View demand forecasting and predictions' },
   { name: 'Alerts', href: '/alerts', description: 'Check low stock and expiry alerts' },
-  { name: 'Orders', href: '/orders', description: 'Manage purchase orders and deliveries' },
   { name: 'Reports', href: '/reports', description: 'View comprehensive daily analytics and ML performance reports' },
+  { name: 'Activity Logs', href: '/drug-logs', description: 'Track detailed drug activity and system changes' },
 ]
 
 function AlertNotificationWrapper() {

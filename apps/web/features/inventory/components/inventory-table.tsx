@@ -33,7 +33,6 @@ interface InventoryItem {
   usingMLLevel: boolean
   reorderLevelVariance: number | null
   stockStatus: 'critical' | 'low' | 'normal' | 'good'
-  supplier: string | null
   // Enhanced intelligent reorder fields
   reorderDate: string | null
   daysUntilReorder: number | null
@@ -198,14 +197,13 @@ export function InventoryTable({ data }: InventoryTableProps) {
                 <TableRow className="bg-muted/50">
                   <TableHead className="text-heading-sm min-w-[200px]">Drug Name</TableHead>
                   <TableHead className="text-heading-sm min-w-[140px]">Stock Level</TableHead>
-                  <TableHead className="text-heading-sm min-w-[120px]">Supplier</TableHead>
                   <TableHead className="text-right text-heading-sm min-w-[280px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
             <TableBody>
               {filteredData.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="py-12 text-center">
+                  <TableCell colSpan={3} className="py-12 text-center">
                     <div className="flex flex-col items-center gap-2">
                       <Package className="h-8 w-8 text-muted-foreground" />
                       <div className="text-heading-sm">No drugs found</div>
@@ -233,11 +231,6 @@ export function InventoryTable({ data }: InventoryTableProps) {
                         currentStock={item.currentStock}
                         unit={item.unit}
                       />
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-body-md">
-                        {item.supplier || <span className="text-muted-foreground">No supplier</span>}
-                      </div>
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">

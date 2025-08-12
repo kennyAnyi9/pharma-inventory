@@ -6,6 +6,7 @@ import { eq, desc, and, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { generateAlerts } from '@/features/alerts/actions/alert-actions'
+import { logStockAddition, logStockUsage, logStatusChange } from '@/lib/drug-activity-logger'
 
 // Schema validators
 const updateStockSchema = z.object({
@@ -105,6 +106,17 @@ export async function updateStock(data: z.infer<typeof updateStockSchema>) {
     const validated = updateStockSchema.parse(data)
     const today = new Date().toISOString().split('T')[0]!
 
+    // Get drug info for logging
+    const [drugInfo] = await db
+      .select({ name: drugs.name, unit: drugs.unit, reorderLevel: drugs.reorderLevel })
+      .from(drugs)
+      .where(eq(drugs.id, validated.drugId))
+      .limit(1)
+
+    if (!drugInfo) {
+      throw new Error(`Drug with ID ${validated.drugId} not found`)
+    }
+
     // Get current stock
     const [currentInventory] = await db
       .select()
@@ -117,13 +129,19 @@ export async function updateStock(data: z.infer<typeof updateStockSchema>) {
       )
       .limit(1)
 
+    let previousStock: number
+    let newStock: number
+
     if (currentInventory) {
       // Update existing record
+      previousStock = currentInventory.closingStock
+      newStock = currentInventory.closingStock + validated.quantity
+
       await db
         .update(inventory)
         .set({
           quantityReceived: currentInventory.quantityReceived + validated.quantity,
-          closingStock: currentInventory.closingStock + validated.quantity,
+          closingStock: newStock,
           notes: validated.notes,
           updatedAt: new Date(),
         })
@@ -138,6 +156,8 @@ export async function updateStock(data: z.infer<typeof updateStockSchema>) {
         .limit(1)
 
       const openingStock = previousInventory?.closingStock || 0
+      previousStock = openingStock
+      newStock = openingStock + validated.quantity
 
       // Create new record
       await db.insert(inventory).values({
@@ -147,10 +167,40 @@ export async function updateStock(data: z.infer<typeof updateStockSchema>) {
         quantityReceived: validated.quantity,
         quantityUsed: 0,
         quantityExpired: 0,
-        closingStock: openingStock + validated.quantity,
+        closingStock: newStock,
         stockoutFlag: false,
         notes: validated.notes,
       })
+    }
+
+    // Log the stock addition activity
+    try {
+      await logStockAddition(
+        validated.drugId,
+        drugInfo.name,
+        validated.quantity,
+        previousStock,
+        newStock,
+        drugInfo.unit,
+        validated.notes
+      )
+
+      // Check if stock status changed and log it
+      const previousStatus = getStockStatus(previousStock, drugInfo.reorderLevel)
+      const newStatus = getStockStatus(newStock, drugInfo.reorderLevel)
+      
+      if (previousStatus !== newStatus) {
+        await logStatusChange(
+          validated.drugId,
+          drugInfo.name,
+          previousStatus,
+          newStatus,
+          newStock
+        )
+      }
+    } catch (logError) {
+      console.error('Failed to log stock addition activity:', logError)
+      // Don't fail the stock update if logging fails
     }
 
     // Auto-generate alerts for real-time reorder level calculations
@@ -163,7 +213,6 @@ export async function updateStock(data: z.infer<typeof updateStockSchema>) {
 
     revalidatePath('/dashboard')
     revalidatePath('/inventory')
-    revalidatePath('/forecasts')
     revalidatePath('/alerts')
 
     return { success: true }
@@ -179,6 +228,17 @@ export async function recordUsage(data: z.infer<typeof recordUsageSchema>) {
     const validated = recordUsageSchema.parse(data)
     const today = new Date().toISOString().split('T')[0]!
 
+    // Get drug info for logging
+    const [drugInfo] = await db
+      .select({ name: drugs.name, unit: drugs.unit, reorderLevel: drugs.reorderLevel })
+      .from(drugs)
+      .where(eq(drugs.id, validated.drugId))
+      .limit(1)
+
+    if (!drugInfo) {
+      throw new Error(`Drug with ID ${validated.drugId} not found`)
+    }
+
     // Get current inventory
     const [currentInventory] = await db
       .select()
@@ -191,15 +251,19 @@ export async function recordUsage(data: z.infer<typeof recordUsageSchema>) {
       )
       .limit(1)
 
+    let previousStock: number
+    let newStock: number
+
     if (currentInventory) {
-      const newClosingStock = currentInventory.closingStock - validated.quantity
-      const stockoutFlag = newClosingStock <= 0
+      previousStock = currentInventory.closingStock
+      newStock = Math.max(0, currentInventory.closingStock - validated.quantity)
+      const stockoutFlag = newStock <= 0
 
       await db
         .update(inventory)
         .set({
           quantityUsed: currentInventory.quantityUsed + validated.quantity,
-          closingStock: Math.max(0, newClosingStock),
+          closingStock: newStock,
           stockoutFlag,
           notes: validated.notes,
           updatedAt: new Date(),
@@ -215,8 +279,9 @@ export async function recordUsage(data: z.infer<typeof recordUsageSchema>) {
         .limit(1)
 
       const openingStock = previousInventory?.closingStock || 0
-      const newClosingStock = openingStock - validated.quantity
-      const stockoutFlag = newClosingStock <= 0
+      previousStock = openingStock
+      newStock = Math.max(0, openingStock - validated.quantity)
+      const stockoutFlag = newStock <= 0
 
       await db.insert(inventory).values({
         drugId: validated.drugId,
@@ -225,10 +290,40 @@ export async function recordUsage(data: z.infer<typeof recordUsageSchema>) {
         quantityReceived: 0,
         quantityUsed: validated.quantity,
         quantityExpired: 0,
-        closingStock: Math.max(0, newClosingStock),
+        closingStock: newStock,
         stockoutFlag,
         notes: validated.notes,
       })
+    }
+
+    // Log the stock usage activity
+    try {
+      await logStockUsage(
+        validated.drugId,
+        drugInfo.name,
+        validated.quantity,
+        previousStock,
+        newStock,
+        drugInfo.unit,
+        validated.notes
+      )
+
+      // Check if stock status changed and log it
+      const previousStatus = getStockStatus(previousStock, drugInfo.reorderLevel)
+      const newStatus = getStockStatus(newStock, drugInfo.reorderLevel)
+      
+      if (previousStatus !== newStatus) {
+        await logStatusChange(
+          validated.drugId,
+          drugInfo.name,
+          previousStatus,
+          newStatus,
+          newStock
+        )
+      }
+    } catch (logError) {
+      console.error('Failed to log stock usage activity:', logError)
+      // Don't fail the usage recording if logging fails
     }
 
     // Auto-generate alerts for real-time reorder level calculations
@@ -245,7 +340,6 @@ export async function recordUsage(data: z.infer<typeof recordUsageSchema>) {
 
     revalidatePath('/dashboard')
     revalidatePath('/inventory')
-    revalidatePath('/forecasts')
     revalidatePath('/alerts')
 
     return { success: true }
