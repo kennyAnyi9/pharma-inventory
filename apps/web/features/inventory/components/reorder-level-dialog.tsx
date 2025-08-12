@@ -30,7 +30,6 @@ interface InventoryItem {
   usingMLLevel: boolean
   reorderLevelVariance: number | null
   stockStatus: 'critical' | 'low' | 'normal' | 'good'
-  supplier: string | null
   reorderDate: string | null
   daysUntilReorder: number | null
   stockSufficiencyDays: number | null

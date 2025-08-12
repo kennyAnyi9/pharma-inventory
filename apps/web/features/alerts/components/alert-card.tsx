@@ -17,7 +17,6 @@ import {
   dismissAlert,
   markAlertAsRead,
 } from "../actions/alert-actions";
-import { CreateOrderFromAlertButton } from "./create-order-from-alert-button";
 
 export interface AlertCardProps {
   alert: {
@@ -187,7 +186,6 @@ export function AlertCard({ alert, onUpdate }: AlertCardProps) {
               <XCircle className="w-4 h-4 mr-2" />
               Dismiss
             </Button>
-            <CreateOrderFromAlertButton alertId={alert.id} disabled={isLoading} />
           </div>
         )}
 

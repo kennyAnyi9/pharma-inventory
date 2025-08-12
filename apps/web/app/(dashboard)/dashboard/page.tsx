@@ -1,11 +1,12 @@
 import { Suspense } from 'react'
 import Link from 'next/link'
 import { db } from '@/lib/db'
-import { drugs } from '@workspace/database'
+import { drugs, reorderCalculations } from '@workspace/database'
+import { eq, and, sql } from 'drizzle-orm'
 import { getInventoryStatus } from '@/features/inventory/actions/inventory-actions'
 import { getAlertCounts } from '@/features/alerts/actions/alert-actions'
-import { getOrderStats } from '@/features/orders/actions/order-actions'
 import { getLatestReorderCalculationStatus } from '@/features/inventory/actions/reorder-actions'
+import { getEffectiveReorderLevel } from '@/lib/reorder-level-utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@workspace/ui/components/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@workspace/ui/components/table'
 import { Button } from '@workspace/ui/components/button'
@@ -53,14 +54,44 @@ async function DashboardContent({ searchParams }: DashboardContentProps) {
   const offset = (page - 1) * limit
   
   // Fetch all data in parallel
-  const [drugRecords, totalDrugs, inventoryStatus, alertCounts, orderStats, reorderStatus] = await Promise.all([
-    db.select().from(drugs).limit(limit).offset(offset),
+  const [drugRecordsRaw, totalDrugs, inventoryStatus, alertCounts, reorderStatus] = await Promise.all([
+    db.select({
+        id: drugs.id,
+        name: drugs.name,
+        category: drugs.category,
+        unit: drugs.unit,
+        reorderLevel: drugs.reorderLevel,
+        calculatedReorderLevel: drugs.calculatedReorderLevel,
+        intelligentReorderLevel: reorderCalculations.intelligentReorderLevel,
+      })
+      .from(drugs)
+      .leftJoin(
+        reorderCalculations,
+        and(
+          eq(drugs.id, reorderCalculations.drugId),
+          eq(
+            reorderCalculations.calculationDate,
+            sql`(SELECT MAX(calculation_date) FROM reorder_calculations WHERE drug_id = ${drugs.id})`
+          )
+        )
+      )
+      .limit(limit)
+      .offset(offset),
     db.select().from(drugs),
     getInventoryStatus().catch(() => []),
     getAlertCounts().catch(() => ({ active: 0, acknowledged: 0, resolved: 0, total: 0 })),
-    getOrderStats().catch(() => ({ draft: 0, pending: 0, approved: 0, ordered: 0, delivered: 0, completed: 0, total: 0 })),
     getLatestReorderCalculationStatus().catch(() => ({ lastCalculationDate: null, totalDrugsWithCalculations: 0, totalDrugs: 0, recentCalculationsCount: 0, calculationCoverage: 0 }))
   ])
+  
+  // Apply unified reorder level logic
+  const drugRecords = drugRecordsRaw.map(drug => ({
+    ...drug,
+    effectiveReorderLevel: getEffectiveReorderLevel({
+      intelligentReorderLevel: drug.intelligentReorderLevel,
+      calculatedReorderLevel: drug.calculatedReorderLevel,
+      reorderLevel: drug.reorderLevel
+    })
+  }))
   
   const totalCount = totalDrugs.length
   const totalPages = Math.ceil(totalCount / limit)
@@ -103,12 +134,12 @@ async function DashboardContent({ searchParams }: DashboardContentProps) {
         </Card>
         <Card className="card-hover">
           <CardContent className="p-6">
-            <div className="text-caption uppercase tracking-wide">Pending Orders</div>
+            <div className="text-caption uppercase tracking-wide">ML Coverage</div>
             <div className="text-display-sm text-info">
-              {orderStats.pending + orderStats.draft}
+              {reorderStatus.calculationCoverage}%
             </div>
             <div className="text-body-sm text-muted-foreground">
-              Awaiting approval
+              Drugs with ML predictions
             </div>
           </CardContent>
         </Card>
@@ -126,7 +157,7 @@ async function DashboardContent({ searchParams }: DashboardContentProps) {
       </div>
       
       {/* Detailed Stats Row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <Card className="card-hover">
           <CardHeader className="pb-3">
             <CardTitle className="text-heading-sm flex items-center gap-2">
@@ -174,32 +205,6 @@ async function DashboardContent({ searchParams }: DashboardContentProps) {
           </CardContent>
         </Card>
         
-        <Card className="card-hover">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-heading-sm flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-info"></div>
-              Order Status
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex justify-between items-center">
-              <span className="text-body-md">Approved</span>
-              <span className="text-heading-sm text-success">{orderStats.approved}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-body-md">Ordered</span>
-              <span className="text-heading-sm text-info">{orderStats.ordered}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-body-md">Delivered</span>
-              <span className="text-heading-sm text-success">{orderStats.delivered}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-body-md">Completed</span>
-              <span className="text-heading-sm text-success">{orderStats.completed}</span>
-            </div>
-          </CardContent>
-        </Card>
         
         <Card className="card-hover">
           <CardHeader className="pb-3">
@@ -301,7 +306,7 @@ async function DashboardContent({ searchParams }: DashboardContentProps) {
                       <div className="text-body-md text-muted-foreground">{drug.unit}</div>
                     </TableCell>
                     <TableCell className="py-3">
-                      <div className="text-body-md font-medium">{drug.reorderLevel}</div>
+                      <div className="text-body-md font-medium">{drug.effectiveReorderLevel}</div>
                     </TableCell>
                   </TableRow>
                 ))}

@@ -6,10 +6,12 @@ import {
   alerts,
   drugs,
   inventory,
+  reorderCalculations,
 } from "@workspace/database/schema";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { getEffectiveReorderLevel } from "@/lib/reorder-level-utils";
 
 // Types
 export interface AlertData {
@@ -71,7 +73,7 @@ export async function generateAlerts(): Promise<AlertGenerationResult> {
   };
 
   try {
-    // Get current inventory status with calculated reorder levels
+    // Get current inventory status with all reorder level types
     const inventoryData = await db
       .select({
         drugId: inventory.drugId,
@@ -80,11 +82,22 @@ export async function generateAlerts(): Promise<AlertGenerationResult> {
         currentStock: inventory.closingStock,
         reorderLevel: drugs.reorderLevel,
         calculatedReorderLevel: drugs.calculatedReorderLevel,
+        intelligentReorderLevel: reorderCalculations.intelligentReorderLevel,
         reorderQuantity: drugs.reorderQuantity,
         date: inventory.date,
       })
       .from(inventory)
       .innerJoin(drugs, eq(inventory.drugId, drugs.id))
+      .leftJoin(
+        reorderCalculations,
+        and(
+          eq(drugs.id, reorderCalculations.drugId),
+          eq(
+            reorderCalculations.calculationDate,
+            sql`(SELECT MAX(calculation_date) FROM reorder_calculations WHERE drug_id = ${drugs.id})`
+          )
+        )
+      )
       .where(
         sql`${inventory.date} = (
           SELECT MAX(date) 
@@ -121,8 +134,12 @@ export async function generateAlerts(): Promise<AlertGenerationResult> {
 }
 
 async function generateLowStockAlert(item: any, result: AlertGenerationResult) {
-  // Prioritize ML-calculated reorder level, fallback to manual only if ML hasn't run yet
-  const effectiveReorderLevel = item.calculatedReorderLevel || item.reorderLevel || 100
+  // Use unified reorder level logic
+  const effectiveReorderLevel = getEffectiveReorderLevel({
+    intelligentReorderLevel: item.intelligentReorderLevel,
+    calculatedReorderLevel: item.calculatedReorderLevel,
+    reorderLevel: item.reorderLevel
+  })
   
   if (item.currentStock <= effectiveReorderLevel) {
     // Check if this alert already exists
@@ -224,8 +241,12 @@ async function resolveOutdatedAlerts(
     if (inventoryItem) {
       let shouldResolve = false;
 
-      // Check if low stock alert should be resolved
-      const effectiveReorderLevel = inventoryItem.calculatedReorderLevel || inventoryItem.reorderLevel || 100
+      // Check if low stock alert should be resolved using unified logic
+      const effectiveReorderLevel = getEffectiveReorderLevel({
+        intelligentReorderLevel: inventoryItem.intelligentReorderLevel,
+        calculatedReorderLevel: inventoryItem.calculatedReorderLevel,
+        reorderLevel: inventoryItem.reorderLevel
+      })
       if (
         alert.type === "low_stock" &&
         inventoryItem.currentStock > effectiveReorderLevel

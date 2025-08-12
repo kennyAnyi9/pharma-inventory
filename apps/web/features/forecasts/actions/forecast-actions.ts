@@ -1,5 +1,10 @@
 'use server'
 
+import { db } from '@/lib/db'
+import { drugs, reorderCalculations } from '@workspace/database'
+import { eq, and, sql, inArray } from 'drizzle-orm'
+import { getEffectiveReorderLevel } from '@/lib/reorder-level-utils'
+
 interface DemandForecast {
   date: string
   predicted_demand: number
@@ -28,6 +33,57 @@ interface MLServiceError {
   message: string
   status?: number
   timestamp: string
+}
+
+// Function to enrich forecast data with unified reorder levels
+async function enrichForecastsWithEffectiveReorderLevels(forecasts: DrugForecast[]): Promise<DrugForecast[]> {
+  try {
+    // Get all reorder level data for the drugs in forecasts
+    const drugIds = forecasts.map(f => f.drug_id)
+    
+    const reorderLevelData = await db
+      .select({
+        drugId: drugs.id,
+        reorderLevel: drugs.reorderLevel,
+        calculatedReorderLevel: drugs.calculatedReorderLevel,
+        intelligentReorderLevel: reorderCalculations.intelligentReorderLevel,
+      })
+      .from(drugs)
+      .leftJoin(
+        reorderCalculations,
+        and(
+          eq(drugs.id, reorderCalculations.drugId),
+          eq(
+            reorderCalculations.calculationDate,
+            sql`(SELECT MAX(calculation_date) FROM reorder_calculations WHERE drug_id = ${drugs.id})`
+          )
+        )
+      )
+      .where(inArray(drugs.id, drugIds))
+    
+    // Create a map for quick lookup
+    const reorderLevelMap = new Map(
+      reorderLevelData.map(item => [
+        item.drugId,
+        getEffectiveReorderLevel({
+          intelligentReorderLevel: item.intelligentReorderLevel,
+          calculatedReorderLevel: item.calculatedReorderLevel,
+          reorderLevel: item.reorderLevel
+        })
+      ])
+    )
+    
+    // Enrich forecasts with effective reorder levels
+    return forecasts.map(forecast => ({
+      ...forecast,
+      reorder_level: reorderLevelMap.get(forecast.drug_id) || forecast.reorder_level
+    }))
+    
+  } catch (error) {
+    console.error('Failed to enrich forecasts with effective reorder levels:', error)
+    // Return original forecasts if enrichment fails
+    return forecasts
+  }
 }
 
 // Fallback strategy: try bulk endpoint first, then individual forecasts
@@ -153,5 +209,21 @@ async function fetchAllForecasts(): Promise<AllForecastsResponse | MLServiceErro
 }
 
 export async function getAllForecasts(): Promise<AllForecastsResponse | MLServiceError | null> {
-  return fetchAllForecasts()
+  const result = await fetchAllForecasts()
+  
+  // If we got forecasts successfully, enrich them with effective reorder levels
+  if (result && !('error' in result) && result.forecasts) {
+    try {
+      const enrichedForecasts = await enrichForecastsWithEffectiveReorderLevels(result.forecasts)
+      return {
+        ...result,
+        forecasts: enrichedForecasts
+      }
+    } catch (error) {
+      console.error('Failed to enrich forecasts, returning original data:', error)
+      return result
+    }
+  }
+  
+  return result
 }

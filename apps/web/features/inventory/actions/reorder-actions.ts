@@ -5,6 +5,7 @@ import { drugs, inventory, reorderCalculations, suppliers } from '@workspace/dat
 import { eq, desc, and, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
+import { logReorderLevelUpdate, logMLCalculation, logSystemUpdate } from '@/lib/drug-activity-logger'
 
 // Zod schemas for ML API response validation
 const MLForecastSchema = z.object({
@@ -402,12 +403,25 @@ export async function calculateAllReorderLevels() {
         }))
       )
 
-      // Batch update drugs table with intelligent reorder levels
+      // Batch update drugs table with intelligent reorder levels and log changes
       // Use intelligent level to prevent overstocking, keep traditional for audit
-      const updatePromises = updates.map((update, index) => {
+      const updatePromises = updates.map(async (update, index) => {
         const calculation = calculations[index]
         if (!calculation) throw new Error(`Calculation missing for index ${index}`)
-        return db.update(drugs)
+        
+        // Get current reorder level before updating
+        const [currentDrugData] = await db
+          .select({ 
+            name: drugs.name, 
+            currentReorderLevel: drugs.reorderLevel,
+            calculatedReorderLevel: drugs.calculatedReorderLevel 
+          })
+          .from(drugs)
+          .where(eq(drugs.id, update.drugId))
+          .limit(1)
+
+        // Update the drug
+        const result = await db.update(drugs)
           .set({
             calculatedReorderLevel: update.calculatedLevel, // Traditional for audit
             reorderLevel: calculation.intelligentReorderLevel, // Use intelligent level for actual decisions
@@ -416,6 +430,46 @@ export async function calculateAllReorderLevels() {
             updatedAt: new Date(),
           })
           .where(eq(drugs.id, update.drugId))
+
+        // Log the ML calculation and reorder level update
+        if (currentDrugData) {
+          try {
+            // Log the ML calculation activity
+            await logMLCalculation(
+              update.drugId,
+              currentDrugData.name,
+              update.calculatedLevel,
+              update.confidence,
+              'enhanced_ml_forecast',
+              {
+                previousLevel: currentDrugData.currentReorderLevel,
+                intelligentLevel: calculation.intelligentReorderLevel,
+                safetyStock: calculation.safetyStock,
+                avgDailyDemand: calculation.avgDailyDemand,
+                leadTimeDays: calculation.leadTimeDays,
+                reorderRecommendation: calculation.reorderRecommendation
+              }
+            )
+
+            // Log the actual reorder level change if different from current
+            if (currentDrugData.currentReorderLevel !== calculation.intelligentReorderLevel) {
+              await logReorderLevelUpdate(
+                update.drugId,
+                currentDrugData.name,
+                currentDrugData.currentReorderLevel || 0,
+                calculation.intelligentReorderLevel,
+                update.confidence,
+                'enhanced_ml_forecast',
+                'ml_system'
+              )
+            }
+          } catch (logError) {
+            console.error(`Failed to log activity for drug ${update.drugId}:`, logError)
+            // Don't fail the update if logging fails
+          }
+        }
+
+        return result
       })
       
       await Promise.all(updatePromises)
@@ -525,6 +579,9 @@ export async function acceptCalculatedReorderLevel(drugId: number) {
     const [drugData] = await db
       .select({
         calculatedReorderLevel: drugs.calculatedReorderLevel,
+        reorderLevel: drugs.reorderLevel,
+        name: drugs.name,
+        confidence: drugs.reorderCalculationConfidence,
       })
       .from(drugs)
       .where(eq(drugs.id, drugId))
@@ -534,6 +591,8 @@ export async function acceptCalculatedReorderLevel(drugId: number) {
       throw new Error('No calculated reorder level found')
     }
 
+    const previousReorderLevel = drugData.reorderLevel
+
     await db
       .update(drugs)
       .set({
@@ -541,6 +600,34 @@ export async function acceptCalculatedReorderLevel(drugId: number) {
         updatedAt: new Date(),
       })
       .where(eq(drugs.id, drugId))
+
+    // Log the manual acceptance of ML recommendation
+    try {
+      await logReorderLevelUpdate(
+        drugId,
+        drugData.name,
+        previousReorderLevel,
+        drugData.calculatedReorderLevel,
+        parseFloat(drugData.confidence || '0'),
+        'user_accepted_ml_recommendation',
+        'user_manual'
+      )
+      
+      await logSystemUpdate(
+        drugId,
+        drugData.name,
+        `User manually accepted ML-calculated reorder level: ${drugData.calculatedReorderLevel} (was ${previousReorderLevel})`,
+        {
+          confidence: drugData.confidence,
+          previousLevel: previousReorderLevel,
+          acceptedLevel: drugData.calculatedReorderLevel,
+          action: 'manual_acceptance'
+        }
+      )
+    } catch (logError) {
+      console.error(`Failed to log manual acceptance for drug ${drugId}:`, logError)
+      // Don't fail the operation if logging fails
+    }
 
     revalidatePath('/inventory')
     revalidatePath('/dashboard')
