@@ -128,10 +128,23 @@ export default function DrugLogsPage() {
 
   // Load data based on view
   useEffect(() => {
-    if (view === 'drug' && selectedDrug) {
-      fetchDrugActivity(selectedDrug.id)
-    } else if (view === 'daily') {
-      fetchDailySummary(selectedDate)
+  useEffect(() => {
+    let isMounted = true
+
+    const loadData = async () => {
+      if (!isMounted) return
+
+      if (view === 'drug' && selectedDrug) {
+        await fetchDrugActivity(selectedDrug.id)
+      } else if (view === 'daily') {
+        await fetchDailySummary(selectedDate)
+      }
+    }
+
+    loadData()
+
+    return () => {
+      isMounted = false
     }
   }, [view, selectedDrug, selectedDate])
 
