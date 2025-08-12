@@ -47,15 +47,20 @@ interface LogActivityParams {
 
 export async function logDrugActivity(params: LogActivityParams) {
   try {
+    // Validate required fields
+    if (!params.drugId || !params.drugName || !params.activityType || !params.description) {
+      throw new Error('Missing required fields for activity logging');
+    }
+
     const stockChange = params.newStock && params.previousStock 
       ? params.newStock - params.previousStock 
-      : params.quantity || 0
+      : params.quantity || 0;
 
     const reorderLevelChange = params.newReorderLevel && params.previousReorderLevel
       ? params.newReorderLevel - params.previousReorderLevel
-      : 0
+      : 0;
 
-    await db.insert(drugActivityLog).values({
+    const result = await db.insert(drugActivityLog).values({
       drugId: params.drugId,
       drugName: params.drugName,
       date: new Date(),
@@ -83,12 +88,16 @@ export async function logDrugActivity(params: LogActivityParams) {
       newStatus: params.newStatus,
       
       metadata: params.metadata,
-    })
+    }).returning({ id: drugActivityLog.id });
 
-    console.log(`📝 Activity logged for drug ${params.drugName} (ID: ${params.drugId}): ${params.description}`)
+    console.log(
+      `📝 Activity logged for drug ${params.drugName} (ID: ${params.drugId}): ${params.description}`
+    );
+    return result[0]?.id;
   } catch (error) {
-    console.error('Failed to log drug activity:', error)
+    console.error('Failed to log drug activity:', error);
     // Don't throw error to prevent breaking main functionality
+    return null;
   }
 }
 
