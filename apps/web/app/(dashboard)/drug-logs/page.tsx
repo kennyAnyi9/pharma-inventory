@@ -135,7 +135,6 @@ export default function DrugLogsPage() {
 
   // Load data based on view
   useEffect(() => {
-  useEffect(() => {
     let isMounted = true
 
     const loadData = async () => {
