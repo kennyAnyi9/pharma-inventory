@@ -9,14 +9,15 @@ import { useEffect, useState } from 'react'
 import { getAlerts } from '@/features/alerts/actions/alert-actions'
 import { Button } from '@workspace/ui/components/button'
 import { Sheet, SheetContent, SheetTrigger } from '@workspace/ui/components/sheet'
-import { Menu, X } from 'lucide-react'
+import { Menu, X, LogOut } from 'lucide-react'
+import { signOut } from 'next-auth/react'
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', description: 'View pharmacy dashboard overview' },
-  { name: 'Inventory', href: '/inventory', description: 'Manage drug inventory and stock levels' },
-  { name: 'Alerts', href: '/alerts', description: 'Check low stock and expiry alerts' },
-  { name: 'Reports', href: '/reports', description: 'View comprehensive daily analytics and ML performance reports' },
-  { name: 'Activity Logs', href: '/drug-logs', description: 'Track detailed drug activity and system changes' },
+  { name: 'Inventory', href: '/dashboard/inventory', description: 'Manage drug inventory and stock levels' },
+  { name: 'Alerts', href: '/dashboard/alerts', description: 'Check low stock and expiry alerts' },
+  { name: 'Reports', href: '/dashboard/reports', description: 'View comprehensive daily analytics and ML performance reports' },
+  { name: 'Activity Logs', href: '/dashboard/drug-logs', description: 'Track detailed drug activity and system changes' },
 ]
 
 function AlertNotificationWrapper() {
@@ -125,6 +126,15 @@ function NavigationClient({ children }: { children: React.ReactNode }) {
             <div className="flex items-center gap-4">
               <AlertNotificationWrapper />
               <ThemeToggle />
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => signOut({ callbackUrl: '/' })}
+                title="Sign out"
+              >
+                <LogOut className="h-4 w-4" />
+                <span className="sr-only">Sign out</span>
+              </Button>
             </div>
           </div>
         </header>

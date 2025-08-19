@@ -17,6 +17,8 @@
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.9.0",
+    "@types/bcryptjs": "^3.0.0",
+    "bcryptjs": "^3.0.2",
     "drizzle-orm": "^0.30.0"
   },
   "devDependencies": {

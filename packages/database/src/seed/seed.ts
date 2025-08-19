@@ -2,7 +2,8 @@ import { drizzle } from 'drizzle-orm/neon-http'
 import { neon } from '@neondatabase/serverless'
 import * as dotenv from 'dotenv'
 import { resolve } from 'path'
-import { drugs, inventory, reorderCalculations } from '../schema'
+import bcrypt from 'bcryptjs'
+import { drugs, inventory, reorderCalculations, users } from '../schema'
 
 // Load environment variables with flexible path strategy
 const envPaths = [
@@ -185,6 +186,7 @@ async function seed() {
       await db.delete(reorderCalculations)  // Delete child records first
       await db.delete(inventory)
       await db.delete(drugs)
+      await db.delete(users)
       
       // Insert drugs
       console.log('💊 Inserting drugs...')
@@ -209,9 +211,22 @@ async function seed() {
       await db.insert(inventory).values(inventoryRecords)
       console.log(`✅ Created inventory records for ${inventoryRecords.length} drugs`)
       
+      // Create admin user
+      console.log('👤 Creating admin user...')
+      const hashedPassword = await bcrypt.hash('12345', 12)
+      await db.insert(users).values({
+        email: 'kennyanyi9@gmail.com',
+        password: hashedPassword,
+        name: 'Kenny Anyi',
+        role: 'admin',
+      })
+      console.log('✅ Admin user created successfully')
+      
       // Commit transaction
       await sql('COMMIT')
       console.log('🎉 Seed completed successfully!')
+      console.log('📧 Admin Email: kennyanyi9@gmail.com')
+      console.log('🔑 Admin Password: 12345')
     } catch (error) {
       // Rollback on error
       await sql('ROLLBACK')
