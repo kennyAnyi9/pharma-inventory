@@ -4,6 +4,15 @@ import bcrypt from 'bcryptjs'
 import { db } from '@/lib/db'
 import { users } from '@workspace/database'
 import { eq } from 'drizzle-orm'
+import { z } from 'zod'
+
+// Dummy hash for timing attack prevention
+const DUMMY_PASSWORD_HASH = bcrypt.hashSync('this-is-a-dummy-password', 10)
+
+const CredentialsSchema = z.object({
+  email: z.string().trim().toLowerCase().email(),
+  password: z.string().min(1),
+})
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -14,35 +23,40 @@ export const authOptions: NextAuthOptions = {
         password: { label: 'Password', type: 'password' }
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          return null
-        }
+        const parsed = CredentialsSchema.safeParse(credentials)
+        if (!parsed.success) return null
+        
+        const { email, password } = parsed.data
 
         try {
-          const userResult = await db
+          const [user] = await db
             .select()
             .from(users)
-            .where(eq(users.email, credentials.email))
+            .where(eq(users.email, email))
             .limit(1)
 
-          const user = userResult[0]
           if (!user) {
+            // Prevent timing attacks by doing dummy hash comparison
+            await bcrypt.compare(password, DUMMY_PASSWORD_HASH)
             return null
           }
 
-          const isValidPassword = await bcrypt.compare(credentials.password, user.password)
+          const isValidPassword = await bcrypt.compare(password, user.password)
           if (!isValidPassword) {
             return null
           }
 
           return {
-            id: user.id,
+            id: String(user.id),
             email: user.email,
             name: user.name,
             role: user.role,
           }
-        } catch (error) {
-          console.error('Auth error:', error)
+        } catch {
+          if (process.env.NODE_ENV === 'development') {
+            // Keep logs generic and avoid PII
+            console.error('Auth error')
+          }
           return null
         }
       }
@@ -54,13 +68,17 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
+        // Ensure sub is set; some flows may omit it
+        token.sub = token.sub ?? String((user as any).id)
         token.role = user.role
       }
       return token
     },
     async session({ session, token }) {
       if (session.user) {
-        session.user.id = token.sub!
+        if (typeof token.sub === 'string') {
+          session.user.id = token.sub
+        }
         session.user.role = token.role as string
       }
       return session
