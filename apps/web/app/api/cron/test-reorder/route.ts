@@ -39,7 +39,7 @@ export async function GET() {
     console.log('🔧 Test 1: Environment Variables')
     const envTest = {
       name: 'Environment Variables',
-      status: 'pass' as const,
+      status: 'pass' as 'pass' | 'fail' | 'warning',
       message: 'CRON_SECRET is set',
       details: {
         CRON_SECRET: !!process.env.CRON_SECRET,
@@ -58,7 +58,7 @@ export async function GET() {
     console.log('⏰ Test 2: Manual Cron Endpoint Call')
     const cronTest = {
       name: 'Cron Endpoint Test',
-      status: 'fail' as const,
+      status: 'fail' as 'pass' | 'fail' | 'warning',
       message: 'Cannot test cron endpoint',
       details: {},
       duration: 0
@@ -116,7 +116,7 @@ export async function GET() {
     console.log('📊 Test 3: Direct Function Call')
     const functionTest = {
       name: 'Direct Function Call',
-      status: 'fail' as const,
+      status: 'fail' as 'pass' | 'fail' | 'warning',
       message: 'Direct function call failed',
       details: {},
       duration: 0
@@ -133,8 +133,8 @@ export async function GET() {
       functionTest.details = {
         success: result.success,
         calculationsCount: result.calculationsCount,
-        timestamp: result.timestamp,
-        errors: result.errors || []
+        timestamp: new Date().toISOString(),
+        enhancedCalculations: result.enhancedCalculations?.length || 0
       }
     } catch (error) {
       functionTest.duration = Date.now() - startTime
@@ -148,7 +148,7 @@ export async function GET() {
     console.log('📅 Test 4: Check Last Calculation Times')
     const timeTest = {
       name: 'Last Calculation Times',
-      status: 'warning' as const,
+      status: 'warning' as 'pass' | 'fail' | 'warning',
       message: 'Checking last calculation times',
       details: {},
       duration: 0
