@@ -211,16 +211,27 @@ async function seed() {
       await db.insert(inventory).values(inventoryRecords)
       console.log(`✅ Created inventory records for ${inventoryRecords.length} drugs`)
       
-      // Create admin user
-      console.log('👤 Creating admin user...')
+      // Create users
+      console.log('👤 Creating users...')
       const hashedPassword = await bcrypt.hash('12345', 12)
+      
+      // Create super admin user
       await db.insert(users).values({
         email: 'kennyanyi9@gmail.com',
         password: hashedPassword,
         name: 'Kenny Anyi',
+        role: 'super_admin',
+      })
+      
+      // Create regular admin user for testing
+      await db.insert(users).values({
+        email: 'admin@pharmacy.com',
+        password: hashedPassword,
+        name: 'Pharmacy Admin',
         role: 'admin',
       })
-      console.log('✅ Admin user created successfully')
+      
+      console.log('✅ Users created successfully (super_admin + admin)')
       
       // Commit transaction
       await sql('COMMIT')

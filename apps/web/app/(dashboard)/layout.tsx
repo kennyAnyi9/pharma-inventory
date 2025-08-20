@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { cn } from '@workspace/ui/lib/utils'
 import { AlertNotification } from '@/features/alerts/components/alert-notification'
 import { ThemeToggle } from '@/components/theme-toggle'
@@ -9,16 +10,58 @@ import { useEffect, useState } from 'react'
 import { getAlerts } from '@/features/alerts/actions/alert-actions'
 import { Button } from '@workspace/ui/components/button'
 import { Sheet, SheetContent, SheetTrigger } from '@workspace/ui/components/sheet'
-import { Menu, X, LogOut } from 'lucide-react'
+import { Menu, LogOut, User, Shield, Crown } from 'lucide-react'
 import { signOut } from 'next-auth/react'
+import { UserRole } from '@workspace/database'
+import { hasRole } from '@/lib/roles'
 
-const navigation = [
-  { name: 'Dashboard', href: '/dashboard', description: 'View pharmacy dashboard overview' },
-  { name: 'Inventory', href: '/dashboard/inventory', description: 'Manage drug inventory and stock levels' },
-  { name: 'Alerts', href: '/dashboard/alerts', description: 'Check low stock and expiry alerts' },
-  { name: 'Reports', href: '/dashboard/reports', description: 'View comprehensive daily analytics and ML performance reports' },
-  { name: 'Activity Logs', href: '/dashboard/drug-logs', description: 'Track detailed drug activity and system changes' },
+// Define navigation items with role requirements
+const allNavigationItems = [
+  { name: 'Dashboard', href: '/dashboard', description: 'View pharmacy dashboard overview', minRole: 'operator' as UserRole },
+  { name: 'Inventory', href: '/dashboard/inventory', description: 'Manage drug inventory and stock levels', minRole: 'operator' as UserRole },
+  { name: 'Alerts', href: '/dashboard/alerts', description: 'Check low stock and expiry alerts', minRole: 'operator' as UserRole },
+  { name: 'Reports', href: '/dashboard/reports', description: 'View comprehensive daily analytics and ML performance reports', minRole: 'admin' as UserRole },
+  { name: 'Activity Logs', href: '/dashboard/drug-logs', description: 'Track detailed drug activity and system changes', minRole: 'admin' as UserRole },
 ]
+
+// Filter navigation based on user role
+function getNavigationForRole(userRole: UserRole) {
+  return allNavigationItems.filter(item => hasRole(userRole, item.minRole))
+}
+
+// Get role display information
+function getRoleInfo(role: UserRole) {
+  switch (role) {
+    case 'super_admin':
+      return {
+        label: 'Super Admin',
+        icon: Crown,
+        color: 'text-purple-600 bg-purple-100 border-purple-200',
+        description: 'Full system access'
+      }
+    case 'admin':
+      return {
+        label: 'Admin',
+        icon: Shield,
+        color: 'text-blue-600 bg-blue-100 border-blue-200',
+        description: 'Administrative access'
+      }
+    case 'operator':
+      return {
+        label: 'Operator',
+        icon: User,
+        color: 'text-green-600 bg-green-100 border-green-200',
+        description: 'Standard access'
+      }
+    default:
+      return {
+        label: 'User',
+        icon: User,
+        color: 'text-gray-600 bg-gray-100 border-gray-200',
+        description: 'Basic access'
+      }
+  }
+}
 
 function AlertNotificationWrapper() {
   const [alerts, setAlerts] = useState<any[]>([])
@@ -58,6 +101,11 @@ function AlertNotificationWrapper() {
 function NavigationClient({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const { data: session } = useSession()
+  
+  // Get navigation items based on user role
+  const userRole = session?.user?.role || 'operator'
+  const navigation = getNavigationForRole(userRole)
 
   const NavigationItems = () => (
     <>
@@ -125,6 +173,30 @@ function NavigationClient({ children }: { children: React.ReactNode }) {
             </div>
             <div className="flex items-center gap-4">
               <AlertNotificationWrapper />
+              
+              {/* User Role Indicator */}
+              {session?.user && (
+                <div className="flex items-center gap-2">
+                  <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium ${getRoleInfo(userRole).color}`}>
+                    {(() => {
+                      const roleInfo = getRoleInfo(userRole)
+                      const IconComponent = roleInfo.icon
+                      return (
+                        <>
+                          <IconComponent className="h-3 w-3" />
+                          <span className="hidden sm:inline">{roleInfo.label}</span>
+                          <span className="sm:hidden">{roleInfo.label.charAt(0)}</span>
+                        </>
+                      )
+                    })()}
+                  </div>
+                  <div className="hidden md:flex flex-col text-right">
+                    <span className="text-xs font-medium text-foreground">{session.user.name}</span>
+                    <span className="text-xs text-muted-foreground">{session.user.email}</span>
+                  </div>
+                </div>
+              )}
+              
               <ThemeToggle />
               <Button
                 variant="ghost"
