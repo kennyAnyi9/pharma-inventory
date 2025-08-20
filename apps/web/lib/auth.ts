@@ -2,7 +2,7 @@ import { NextAuthOptions } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import bcrypt from 'bcryptjs'
 import { db } from '@/lib/db'
-import { users } from '@workspace/database'
+import { users, type UserRole } from '@workspace/database'
 import { eq } from 'drizzle-orm'
 import { z } from 'zod'
 
@@ -79,7 +79,7 @@ export const authOptions: NextAuthOptions = {
         if (typeof token.sub === 'string') {
           session.user.id = token.sub
         }
-        session.user.role = token.role as string
+        session.user.role = token.role as UserRole
       }
       return session
     },

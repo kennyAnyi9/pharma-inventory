@@ -1,0 +1,193 @@
+{
+  "title": "ML Service Improvement Tasks - First Iteration",
+  "description": "Simple, practical improvements to add automated retraining and basic monitoring",
+  "priority": "Keep it simple and working",
+  "analysis": {
+    "current_cron_jobs": 2,
+    "vercel_hobby_limit": 2,
+    "available_slots": 0,
+    "existing_crons": [
+      "calculate-reorder-levels (daily 2 AM) - CRITICAL",
+      "daily-alerts (daily 6 AM) - CRITICAL"
+    ],
+    "current_roles": ["admin"],
+    "existing_routes": ["/dashboard", "/inventory", "/alerts", "/reports", "/drug-logs"],
+    "constraint": "Cannot add new cron jobs - both slots used by business-critical operations"
+  },
+  "strategy": {
+    "user_experience": "Hide ML complexity from regular users, show only to super admins",
+    "integration": "Enhance existing /reports page instead of creating new ML pages",
+    "roles": "Add super_admin role for technical features"
+  },
+  "tasks": [
+    {
+      "id": 0,
+      "title": "Add Role-Based Access Control",
+      "description": "Add super_admin role and role-based UI filtering",
+      "priority": "HIGH",
+      "effort": "LOW",
+      "files_to_create": [],
+      "files_to_modify": [
+        "packages/database/src/schema/users.ts",
+        "apps/web/lib/auth.ts",
+        "apps/web/app/(dashboard)/layout.tsx"
+      ],
+      "implementation": [
+        "Update user schema: admin | super_admin | operator",
+        "Add role check utility functions",
+        "Filter navigation based on user role",
+        "Update seed script to create super_admin user"
+      ],
+      "acceptance_criteria": [
+        "Different navigation for different roles",
+        "Super admin sees technical features",
+        "Regular admin sees simplified interface"
+      ]
+    },
+    {
+      "id": 1,
+      "title": "Add Manual ML Retraining System",
+      "description": "Create manual retrain button since cron slots are full (2/2 used by critical operations)",
+      "priority": "HIGH",
+      "effort": "LOW",
+      "constraint": "Cannot add cron job - Vercel Hobby limit reached",
+      "files_to_create": [
+        "apps/web/app/api/ml/retrain/route.ts"
+      ],
+      "files_to_modify": [
+        "apps/web/app/(dashboard)/dashboard/reports/page.tsx"
+      ],
+      "implementation": [
+        "Create manual retrain API endpoint",
+        "Add retrain button to reports page (super_admin only)",
+        "Show last retrain date and status",
+        "Add confirmation dialog and progress indicator",
+        "Log retrain attempts and results"
+      ],
+      "acceptance_criteria": [
+        "Super admin can manually trigger retraining",
+        "Shows loading state and completion status",
+        "Displays last retrain date and success/failure",
+        "Hidden from regular admin users"
+      ],
+      "future_automation": [
+        "Option 1: Piggyback on existing calculate-reorder-levels cron (weekly check)",
+        "Option 2: External cron service (GitHub Actions, etc.)",
+        "Option 3: Upgrade to Vercel Pro for more cron slots"
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Add ML Section to Reports Page",
+      "description": "Enhance existing reports page with ML health section (super_admin only)",
+      "priority": "HIGH",
+      "effort": "MEDIUM",
+      "files_to_create": [
+        "apps/web/app/api/ml/performance/route.ts",
+        "apps/web/components/ml-health-section.tsx"
+      ],
+      "files_to_modify": [
+        "apps/web/app/(dashboard)/dashboard/reports/page.tsx"
+      ],
+      "implementation": [
+        "Create API to compare predictions vs actual usage",
+        "Add ML Health section to existing reports page",
+        "Show simple status for admin: 'Forecasting: Working ✅'",
+        "Show detailed metrics for super_admin only",
+        "Use user-friendly language, avoid ML jargon"
+      ],
+      "acceptance_criteria": [
+        "Regular admin sees simple 'Forecasting: Good' status",
+        "Super admin sees prediction accuracy metrics",
+        "Integrated into existing reports page"
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Add Manual Retrain Button",
+      "description": "Allow admins to manually trigger retraining from the dashboard",
+      "priority": "MEDIUM",
+      "effort": "LOW",
+      "files_to_create": [
+        "apps/web/app/api/ml/retrain/route.ts"
+      ],
+      "files_to_modify": [
+        "apps/web/app/(dashboard)/dashboard/ml-performance/page.tsx"
+      ],
+      "implementation": [
+        "Create API endpoint that calls ML service /train",
+        "Add button to ML performance page",
+        "Show loading state and results",
+        "Add confirmation dialog"
+      ],
+      "acceptance_criteria": [
+        "Button triggers retraining successfully",
+        "Shows progress and completion status",
+        "Updates performance metrics after retrain"
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Add Basic Performance Alerting",
+      "description": "Send alerts when model performance drops significantly",
+      "priority": "MEDIUM",
+      "effort": "MEDIUM",
+      "files_to_create": [
+        "apps/web/app/api/cron/check-ml-performance/route.ts"
+      ],
+      "files_to_modify": [
+        "vercel.json (add daily performance check)",
+        "existing alert system"
+      ],
+      "implementation": [
+        "Daily cron to check prediction accuracy",
+        "Alert if accuracy drops >20% from baseline",
+        "Integrate with existing alert system",
+        "Simple email/dashboard notification"
+      ],
+      "acceptance_criteria": [
+        "Automatically detects performance degradation",
+        "Sends alerts via existing alert system",
+        "Shows alerts in dashboard"
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Add ML Service Health Check",
+      "description": "Monitor ML service availability and model loading status",
+      "priority": "LOW",
+      "effort": "LOW",
+      "files_to_create": [
+        "apps/web/app/api/ml/health/route.ts"
+      ],
+      "files_to_modify": [
+        "apps/web/app/(dashboard)/dashboard/ml-performance/page.tsx"
+      ],
+      "implementation": [
+        "Check if ML service is responding",
+        "Verify all models are loaded",
+        "Show service status in dashboard",
+        "Basic uptime monitoring"
+      ],
+      "acceptance_criteria": [
+        "Shows ML service online/offline status",
+        "Lists which models are loaded",
+        "Shows last successful prediction time"
+      ]
+    }
+  ],
+  "execution_order": [
+    "Task 1: Auto-retraining (foundational)",
+    "Task 2: Performance monitoring (visibility)",
+    "Task 3: Manual retrain (control)",
+    "Task 4: Performance alerting (automation)",
+    "Task 5: Health check (reliability)"
+  ],
+  "notes": [
+    "Keep implementations simple and focused",
+    "Reuse existing patterns and components",
+    "Test each task before moving to next",
+    "No complex ML algorithms - just practical tooling",
+    "Can expand later once basics are working"
+  ]
+}

@@ -161,14 +161,17 @@ function calculateOptimalReorderLevel(
   targetServiceLevel: number = 0.95
 ): EnhancedReorderData {
   // Calculate average daily demand from 7-day forecast
-  const avgDailyDemand = forecast.total_predicted_7_days / 7
+  const rawAvgDailyDemand = forecast.total_predicted_7_days / 7
+  
+  // Ensure avgDailyDemand is never zero or negative to prevent Infinity values
+  const avgDailyDemand = Math.max(0.1, rawAvgDailyDemand) // Minimum 0.1 units per day
 
   // Calculate demand standard deviation from daily forecasts
   const dailyDemands = forecast.forecasts.map(f => f.predicted_demand)
   const variance = dailyDemands.reduce((sum, demand) => {
     return sum + Math.pow(demand - avgDailyDemand, 2)
   }, 0) / dailyDemands.length
-  const demandStdDev = Math.sqrt(variance)
+  const demandStdDev = Math.max(0.1, Math.sqrt(variance)) // Minimum std dev to prevent zero
 
   // Z-score for target service level (95% = 1.96, 99% = 2.58)
   const zScore = targetServiceLevel === 0.99 ? 2.58 : 1.96
@@ -182,7 +185,10 @@ function calculateOptimalReorderLevel(
   // INTELLIGENT CALCULATIONS - Prevent overstocking and provide date-based recommendations
   // Use REAL current stock from database, not outdated ML service data
   const currentStock = realCurrentStock
-  const stockSufficiencyDays = Math.floor(currentStock / avgDailyDemand)
+  const rawStockSufficiencyDays = currentStock / avgDailyDemand
+  
+  // Ensure stockSufficiencyDays is finite and reasonable (max 9999 days to prevent database issues)
+  const stockSufficiencyDays = Math.floor(Math.min(9999, Math.max(0, rawStockSufficiencyDays)))
 
   // Calculate when to actually reorder based on current stock and lead time
   let reorderDate: string | null = null
@@ -204,6 +210,9 @@ function calculateOptimalReorderLevel(
     reorderRecommendation = 'upcoming'
     const daysBeforeStockOut = stockSufficiencyDays - leadTimeDays - 2 // 2 days buffer
     daysUntilReorder = Math.max(1, daysBeforeStockOut)
+    
+    // Ensure reasonable date bounds
+    daysUntilReorder = Math.min(30, Math.max(1, daysUntilReorder))
 
     const reorderDateObj = new Date()
     reorderDateObj.setDate(reorderDateObj.getDate() + daysUntilReorder)
@@ -217,6 +226,9 @@ function calculateOptimalReorderLevel(
     reorderRecommendation = 'sufficient'
     const daysBeforeStockOut = stockSufficiencyDays - leadTimeDays - 3 // 3 days buffer
     daysUntilReorder = Math.max(7, daysBeforeStockOut)
+    
+    // Ensure reasonable date bounds
+    daysUntilReorder = Math.min(60, Math.max(7, daysUntilReorder))
 
     const reorderDateObj = new Date()
     reorderDateObj.setDate(reorderDateObj.getDate() + daysUntilReorder)
@@ -230,6 +242,9 @@ function calculateOptimalReorderLevel(
     // Stock sufficient for more than 3 weeks beyond lead time - OVERSTOCKED
     reorderRecommendation = 'overstocked'
     daysUntilReorder = stockSufficiencyDays - leadTimeDays - 7 // Wait until much closer to need
+    
+    // Ensure daysUntilReorder is reasonable (max 365 days in the future)
+    daysUntilReorder = Math.min(365, Math.max(21, daysUntilReorder))
 
     const reorderDateObj = new Date()
     reorderDateObj.setDate(reorderDateObj.getDate() + daysUntilReorder)
@@ -250,20 +265,26 @@ function calculateOptimalReorderLevel(
     intelligentLevel: intelligentReorderLevel
   })
 
+  // Final validation to ensure all values are finite and safe for database
+  const safeCalculatedLevel = Math.min(999999, Math.max(1, traditionalReorderLevel))
+  const safeSafetyStock = Math.min(999999, Math.max(0, safetyStock))
+  const safeIntelligentLevel = Math.min(999999, Math.max(1, intelligentReorderLevel))
+  const safeDaysUntilReorder = daysUntilReorder !== null ? Math.min(9999, Math.max(-1, daysUntilReorder)) : null
+
   return {
     drugId: databaseDrugId,
-    calculatedLevel: traditionalReorderLevel, // Keep traditional for audit
-    safetyStock,
+    calculatedLevel: safeCalculatedLevel, // Keep traditional for audit
+    safetyStock: safeSafetyStock,
     avgDailyDemand,
     demandStdDev,
     leadTimeDays,
     confidenceLevel: targetServiceLevel,
     // Enhanced intelligence
     reorderDate,
-    daysUntilReorder,
+    daysUntilReorder: safeDaysUntilReorder,
     stockSufficiencyDays,
     reorderRecommendation,
-    intelligentReorderLevel,
+    intelligentReorderLevel: safeIntelligentLevel,
     preventOverstockingNote
   }
 }
