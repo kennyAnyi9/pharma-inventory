@@ -21,6 +21,7 @@ import {
   BarChart3
 } from 'lucide-react'
 import { MLHealthSection } from '@/components/ml-health-section'
+import { MLPerformanceTestSection } from '@/components/ml-performance-test-section'
 
 interface AnalyticsReport {
   reportDate: string
@@ -272,6 +273,9 @@ export default function ReportsPage() {
 
       {/* ML Health Section */}
       <MLHealthSection className="mb-6" />
+
+      {/* ML Performance Test Section */}
+      <MLPerformanceTestSection className="mb-6" />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* ML Service Health */}

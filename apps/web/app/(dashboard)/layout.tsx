@@ -10,18 +10,19 @@ import { useEffect, useState } from 'react'
 import { getAlerts } from '@/features/alerts/actions/alert-actions'
 import { Button } from '@workspace/ui/components/button'
 import { Sheet, SheetContent, SheetTrigger } from '@workspace/ui/components/sheet'
-import { Menu, LogOut, User, Shield, Crown } from 'lucide-react'
+import { Menu, LogOut, User, Shield, Crown, LayoutDashboard, Package, AlertTriangle, BarChart3, Activity, TrendingUp } from 'lucide-react'
 import { signOut } from 'next-auth/react'
 import { UserRole } from '@workspace/database'
 import { hasRole } from '@/lib/roles'
 
-// Define navigation items with role requirements
+// Define navigation items with role requirements and icons
 const allNavigationItems = [
-  { name: 'Dashboard', href: '/dashboard', description: 'View pharmacy dashboard overview', minRole: 'operator' as UserRole },
-  { name: 'Inventory', href: '/dashboard/inventory', description: 'Manage drug inventory and stock levels', minRole: 'operator' as UserRole },
-  { name: 'Alerts', href: '/dashboard/alerts', description: 'Check low stock and expiry alerts', minRole: 'operator' as UserRole },
-  { name: 'Reports', href: '/dashboard/reports', description: 'View comprehensive daily analytics and ML performance reports', minRole: 'admin' as UserRole },
-  { name: 'Activity Logs', href: '/dashboard/drug-logs', description: 'Track detailed drug activity and system changes', minRole: 'admin' as UserRole },
+  { name: 'Overview', href: '/dashboard', description: 'View pharmacy dashboard overview', minRole: 'operator' as UserRole, icon: LayoutDashboard },
+  { name: 'Inventory', href: '/dashboard/inventory', description: 'Manage drug inventory and stock levels', minRole: 'operator' as UserRole, icon: Package },
+  { name: 'Alerts', href: '/dashboard/alerts', description: 'Check low stock and expiry alerts', minRole: 'operator' as UserRole, icon: AlertTriangle },
+  { name: 'Forecasts', href: '/dashboard/forecasts', description: 'View ML forecasts and predictions', minRole: 'super_admin' as UserRole, icon: TrendingUp },
+  { name: 'Reports', href: '/dashboard/reports', description: 'View comprehensive daily analytics and ML performance reports', minRole: 'admin' as UserRole, icon: BarChart3 },
+  { name: 'Activity Logs', href: '/dashboard/drug-logs', description: 'Track detailed drug activity and system changes', minRole: 'admin' as UserRole, icon: Activity },
 ]
 
 // Filter navigation based on user role
@@ -111,21 +112,26 @@ function NavigationClient({ children }: { children: React.ReactNode }) {
     <>
       {navigation.map((item) => {
         const isActive = pathname === item.href
+        const IconComponent = item.icon
         return (
           <Link
             key={item.name}
             href={item.href}
             className={cn(
-              "flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+              "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-all duration-150 group relative",
               isActive
-                ? "bg-sidebar-accent text-sidebar-accent-foreground border-l-2 border-sidebar-primary"
-                : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                ? "bg-primary/10 text-primary border-l-2 border-primary"
+                : "text-foreground/70 hover:text-foreground hover:bg-accent/50"
             )}
             aria-current={isActive ? 'page' : undefined}
             aria-label={item.description}
             onClick={() => setMobileMenuOpen(false)}
           >
-            {item.name}
+            <IconComponent className="h-4 w-4 flex-shrink-0" />
+            <span className="relative z-10">{item.name}</span>
+            {isActive && (
+              <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent rounded-md" />
+            )}
           </Link>
         )
       })}
@@ -133,86 +139,104 @@ function NavigationClient({ children }: { children: React.ReactNode }) {
   )
 
   return (
-    <div className="flex min-h-screen bg-background">
-      {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex w-64 border-r bg-sidebar shadow-soft flex-col" role="navigation" aria-label="Main navigation">
-        <div className="flex h-16 items-center border-b border-sidebar-border px-6">
-          <h1 className="text-xl font-semibold tracking-tight text-sidebar-foreground">Pharma Inventory</h1>
-        </div>
-        <nav className="flex-1 space-y-1 p-4">
-          <NavigationItems />
-        </nav>
-      </aside>
-
-      {/* Main content */}
-      <div className="flex-1">
-        {/* Top header with alerts */}
-        <header className="border-b bg-card shadow-soft sticky top-0 z-40 backdrop-blur supports-[backdrop-filter]:bg-card/80">
-          <div className="flex h-16 items-center justify-between px-4 lg:px-6">
-            <div className="flex items-center gap-4">
-              {/* Mobile Navigation */}
-              <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-                <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon" className="lg:hidden">
-                    <Menu className="h-5 w-5" />
-                    <span className="sr-only">Toggle navigation</span>
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="left" className="w-64 p-0 bg-sidebar">
-                  <div className="flex h-16 items-center border-b border-sidebar-border px-6">
-                    <h1 className="text-xl font-semibold tracking-tight text-sidebar-foreground">Pharma Inventory</h1>
-                  </div>
-                  <nav className="space-y-1 p-4">
-                    <NavigationItems />
-                  </nav>
-                </SheetContent>
-              </Sheet>
-              <div className="lg:hidden">
-                <h1 className="text-lg font-semibold tracking-tight">Pharma Inventory</h1>
-              </div>
-            </div>
-            <div className="flex items-center gap-4">
-              <AlertNotificationWrapper />
-              
-              {/* User Role Indicator */}
-              {session?.user && (
-                <div className="flex items-center gap-2">
-                  <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium ${getRoleInfo(userRole).color}`}>
-                    {(() => {
-                      const roleInfo = getRoleInfo(userRole)
-                      const IconComponent = roleInfo.icon
-                      return (
-                        <>
-                          <IconComponent className="h-3 w-3" />
-                          <span className="hidden sm:inline">{roleInfo.label}</span>
-                          <span className="sm:hidden">{roleInfo.label.charAt(0)}</span>
-                        </>
-                      )
-                    })()}
-                  </div>
-                  <div className="hidden md:flex flex-col text-right">
-                    <span className="text-xs font-medium text-foreground">{session.user.name}</span>
-                    <span className="text-xs text-muted-foreground">{session.user.email}</span>
-                  </div>
+    <div className="min-h-screen bg-background">
+      {/* Top Header Bar - Full Width */}
+      <header className="h-14 border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60 sticky top-0 z-50">
+        <div className="flex h-full items-center justify-between px-6">
+          {/* Left side - Logo and Mobile Menu */}
+          <div className="flex items-center gap-4">
+            {/* Mobile Navigation */}
+            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="sm" className="lg:hidden">
+                  <Menu className="h-4 w-4" />
+                  <span className="sr-only">Toggle navigation</span>
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-64 p-0 bg-sidebar border-r">
+                <div className="flex h-14 items-center border-b px-6">
+                  <h1 className="text-lg font-semibold tracking-tight text-sidebar-foreground">Pharma Inventory</h1>
                 </div>
-              )}
-              
-              <ThemeToggle />
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => signOut({ callbackUrl: '/' })}
-                title="Sign out"
-              >
-                <LogOut className="h-4 w-4" />
-                <span className="sr-only">Sign out</span>
-              </Button>
+                <nav className="space-y-1 p-4">
+                  <NavigationItems />
+                </nav>
+              </SheetContent>
+            </Sheet>
+            
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded bg-primary flex items-center justify-center">
+                <span className="text-primary-foreground font-bold text-sm">P</span>
+              </div>
+              <h1 className="text-lg font-semibold tracking-tight">Pharma Inventory</h1>
             </div>
           </div>
-        </header>
-        <main className="section-spacing px-4 lg:px-6">
-          <div className="content-spacing max-w-7xl mx-auto">
-            {children}
+
+          {/* Right side - User controls */}
+          <div className="flex items-center gap-3">
+            <AlertNotificationWrapper />
+            <ThemeToggle />
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => signOut({ callbackUrl: '/' })}
+              title="Sign out"
+              className="gap-2"
+            >
+              <LogOut className="h-4 w-4" />
+              <span className="hidden sm:inline">Sign out</span>
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Layout Container */}
+      <div className="flex h-[calc(100vh-3.5rem)]">
+        {/* Left Sidebar - Hidden on Mobile */}
+        <aside className="hidden lg:flex w-64 border-r bg-sidebar/50 flex-col" role="navigation" aria-label="Main navigation">
+          <nav className="flex-1 space-y-1 p-4 pt-6">
+            <NavigationItems />
+          </nav>
+          
+          {/* Sidebar Footer - User Info */}
+          {session?.user && (
+            <div className="p-4 border-t bg-sidebar/80">
+              <div className="flex items-center gap-2 mb-2">
+                <div className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium ${getRoleInfo(userRole).color}`}>
+                  {(() => {
+                    const roleInfo = getRoleInfo(userRole)
+                    const IconComponent = roleInfo.icon
+                    return (
+                      <>
+                        <IconComponent className="h-3 w-3" />
+                        <span>{roleInfo.label}</span>
+                      </>
+                    )
+                  })()}
+                </div>
+              </div>
+              <div className="text-xs">
+                <p className="font-medium text-foreground">{session.user.name}</p>
+                <p className="text-muted-foreground truncate">{session.user.email}</p>
+              </div>
+            </div>
+          )}
+          
+          {!session?.user && (
+            <div className="p-4 border-t bg-sidebar/80">
+              <div className="text-xs text-muted-foreground">
+                <p>© 2024 Pharma Inventory</p>
+                <p className="mt-1">v1.0.0</p>
+              </div>
+            </div>
+          )}
+        </aside>
+
+        {/* Main Content Area */}
+        <main className="flex-1 overflow-auto">
+          <div className="h-full">
+            <div className="p-6 max-w-7xl mx-auto">
+              {children}
+            </div>
           </div>
         </main>
       </div>
