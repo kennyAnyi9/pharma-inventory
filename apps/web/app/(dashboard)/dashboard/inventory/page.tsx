@@ -9,7 +9,7 @@ import {
 } from "@workspace/ui/components/card";
 
 // Force dynamic rendering - no caching for real-time inventory
-export const dynamic = 'force-dynamic'
+export const dynamic = "force-dynamic";
 
 export default async function InventoryPage() {
   let inventory: Awaited<ReturnType<typeof getInventoryStatus>> = [];
@@ -44,7 +44,7 @@ export default async function InventoryPage() {
           Inventory Management
         </h2>
         <p className="text-muted-foreground">
-          Track stock levels, record usage, and manage drug inventory
+          Track stock levels, record usage, add stock and view AI insights.
         </p>
       </div>
 
