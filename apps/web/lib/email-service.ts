@@ -1,6 +1,13 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Initialize Resend only when API key is available
+const getResendClient = () => {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    throw new Error('RESEND_API_KEY environment variable is not set');
+  }
+  return new Resend(apiKey);
+};
 
 export interface CriticalStockAlert {
   drugName: string;
@@ -20,6 +27,7 @@ export async function sendCriticalStockAlert(
   recipients: EmailRecipient[]
 ) {
   try {
+    const resend = getResendClient();
     const subject = `🚨 Critical Stock Alert: ${alert.drugName}`;
     
     const htmlContent = `

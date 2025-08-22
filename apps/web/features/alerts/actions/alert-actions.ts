@@ -189,6 +189,11 @@ async function generateLowStockAlert(item: any, result: AlertGenerationResult) {
 
 async function sendCriticalStockEmail(item: any, effectiveReorderLevel: number) {
   try {
+    // Skip email sending if API key is not configured
+    if (!process.env.RESEND_API_KEY) {
+      console.log('📧 RESEND_API_KEY not configured, skipping email notification');
+      return;
+    }
     // Check if we've already sent an email for this drug in the last 24 hours
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
