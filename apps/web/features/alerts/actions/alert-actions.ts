@@ -7,11 +7,13 @@ import {
   drugs,
   inventory,
   reorderCalculations,
+  emailNotifications,
 } from "@workspace/database/schema";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, sql, gte } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getEffectiveReorderLevel } from "@/lib/reorder-level-utils";
+import { sendCriticalStockAlert, getEmailRecipients } from "@/lib/email-service";
 
 // Types
 export interface AlertData {
@@ -176,7 +178,87 @@ async function generateLowStockAlert(item: any, result: AlertGenerationResult) {
       });
 
       result.generated++;
+
+      // Send email for critical alerts only
+      if (severity === "critical") {
+        await sendCriticalStockEmail(item, effectiveReorderLevel);
+      }
     }
+  }
+}
+
+async function sendCriticalStockEmail(item: any, effectiveReorderLevel: number) {
+  try {
+    // Check if we've already sent an email for this drug in the last 24 hours
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    const recentEmail = await db
+      .select()
+      .from(emailNotifications)
+      .where(
+        and(
+          eq(emailNotifications.drugId, item.drugId),
+          eq(emailNotifications.notificationType, "critical_stock"),
+          gte(emailNotifications.sentAt, yesterday)
+        )
+      )
+      .limit(1);
+
+    if (recentEmail.length > 0) {
+      console.log(`📧 Skipping email for ${item.drugName} - already sent in last 24 hours`);
+      return;
+    }
+
+    // Get email recipients (admin and super_admin users)
+    const recipients = await getEmailRecipients();
+    
+    if (recipients.length === 0) {
+      console.log("📧 No email recipients found for critical stock alert");
+      return;
+    }
+
+    // Get supplier information if available
+    const drugDetails = await db
+      .select({
+        supplier: drugs.supplier,
+      })
+      .from(drugs)
+      .where(eq(drugs.id, item.drugId))
+      .limit(1);
+
+    const supplier = drugDetails[0]?.supplier || undefined;
+
+    // Send the email
+    const emailResult = await sendCriticalStockAlert(
+      {
+        drugName: item.drugName,
+        currentStock: item.currentStock,
+        reorderLevel: effectiveReorderLevel,
+        supplier,
+        drugId: item.drugId,
+      },
+      recipients
+    );
+
+    if (emailResult.success) {
+      // Log email notifications in database
+      for (const recipient of recipients) {
+        await db.insert(emailNotifications).values({
+          drugId: item.drugId,
+          notificationType: "critical_stock",
+          recipientEmail: recipient.email,
+          subject: `🚨 Critical Stock Alert: ${item.drugName}`,
+        });
+      }
+
+      console.log(`📧 Critical stock email sent for ${item.drugName} to ${recipients.length} recipients`);
+    } else {
+      console.error(`📧 Failed to send critical stock email for ${item.drugName}`);
+    }
+
+  } catch (error) {
+    console.error("📧 Error sending critical stock email:", error);
   }
 }
 
