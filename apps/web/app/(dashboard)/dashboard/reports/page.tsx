@@ -1,161 +1,176 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@workspace/ui/components/card'
-import { Badge } from '@workspace/ui/components/badge'
-import { Button } from '@workspace/ui/components/button'
-import { Input } from '@workspace/ui/components/input'
-import { 
-  Activity, 
-  AlertTriangle, 
-  Brain, 
-  Calendar, 
-  CheckCircle, 
-  Download, 
-  RefreshCw, 
-  TrendingUp, 
-  TrendingDown,
+import { MLHealthSection } from "@/components/ml-health-section";
+import { MLPerformanceTestSection } from "@/components/ml-performance-test-section";
+import { MLEvaluationSection } from "@/components/ml-evaluation-section";
+import { Badge } from "@workspace/ui/components/badge";
+import { Button } from "@workspace/ui/components/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@workspace/ui/components/card";
+import { Input } from "@workspace/ui/components/input";
+import {
+  Activity,
+  AlertTriangle,
+  BarChart3,
+  Brain,
+  CheckCircle,
+  Download,
   Package,
-  Clock,
+  RefreshCw,
+  TrendingUp,
   Zap,
-  BarChart3
-} from 'lucide-react'
-import { MLHealthSection } from '@/components/ml-health-section'
-import { MLPerformanceTestSection } from '@/components/ml-performance-test-section'
+} from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface AnalyticsReport {
-  reportDate: string
-  timestamp: string
+  reportDate: string;
+  timestamp: string;
   mlServiceHealth: {
-    status: string
-    message: string
-    healthCheckResponseTime: number
-    predictionResponseTime: number
-    predictionCount: number
-    lastChecked: string
-    serviceUrl: string
-  }
+    status: string;
+    message: string;
+    healthCheckResponseTime: number;
+    predictionResponseTime: number;
+    predictionCount: number;
+    lastChecked: string;
+    serviceUrl: string;
+  };
   dailyMovements: {
     summary: {
-      totalDrugsWithMovements: number
-      totalReceived: number
-      totalUsed: number
-      averageUsage: number
-      drugsWithHighUsage: number
-      drugsReceived: number
-    }
+      totalDrugsWithMovements: number;
+      totalReceived: number;
+      totalUsed: number;
+      averageUsage: number;
+      drugsWithHighUsage: number;
+      drugsReceived: number;
+    };
     movements: Array<{
-      drugId: number
-      drugName: string
-      unit: string
-      quantityReceived: number
-      quantityUsed: number
-      closingStock: number
-    }>
-  }
+      drugId: number;
+      drugName: string;
+      unit: string;
+      quantityReceived: number;
+      quantityUsed: number;
+      closingStock: number;
+    }>;
+  };
   mlPerformance: {
-    totalCalculations: number
-    mlSuccessRate: number
-    mlCalculations: number
-    fallbackCalculations: number
-  }
+    totalCalculations: number;
+    mlSuccessRate: number;
+    mlCalculations: number;
+    fallbackCalculations: number;
+  };
   stockAnalysis: {
     summary: {
-      totalDrugs: number
-      critical: number
-      low: number
-      normal: number
-      good: number
-    }
+      totalDrugs: number;
+      critical: number;
+      low: number;
+      normal: number;
+      good: number;
+    };
     criticalDrugs: Array<{
-      drugName: string
-      currentStock: number
-      effectiveReorderLevel: number
-      unit: string
-    }>
-  }
+      drugName: string;
+      currentStock: number;
+      effectiveReorderLevel: number;
+      unit: string;
+    }>;
+  };
   summary: {
-    systemHealth: string
+    systemHealth: string;
     keyMetrics: {
-      mlServiceStatus: string
-      totalDailyMovements: number
-      criticalStockItems: number
-      mlSuccessRate: number
-    }
-    alerts: string[]
-    recommendations: string[]
-  }
+      mlServiceStatus: string;
+      totalDailyMovements: number;
+      criticalStockItems: number;
+      mlSuccessRate: number;
+    };
+    alerts: string[];
+    recommendations: string[];
+  };
 }
 
 export default function ReportsPage() {
-  const [report, setReport] = useState<AnalyticsReport | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]!)
-  const [error, setError] = useState<string | null>(null)
+  const [report, setReport] = useState<AnalyticsReport | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [selectedDate, setSelectedDate] = useState(
+    new Date().toISOString().split("T")[0]!
+  );
+  const [error, setError] = useState<string | null>(null);
 
   const fetchReport = async (date: string) => {
-    setLoading(true)
-    setError(null)
-    
+    setLoading(true);
+    setError(null);
+
     try {
-      const response = await fetch(`/api/reports/daily-analytics?date=${date}`)
+      const response = await fetch(`/api/reports/daily-analytics?date=${date}`);
       if (!response.ok) {
-        throw new Error(`Failed to fetch report: ${response.status}`)
+        throw new Error(`Failed to fetch report: ${response.status}`);
       }
-      
-      const data = await response.json()
-      setReport(data)
+
+      const data = await response.json();
+      setReport(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load report')
-      console.error('Report fetch error:', err)
+      setError(err instanceof Error ? err.message : "Failed to load report");
+      console.error("Report fetch error:", err);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
-    fetchReport(selectedDate)
-  }, [selectedDate])
+    fetchReport(selectedDate);
+  }, [selectedDate]);
 
   const downloadReport = () => {
-    if (!report) return
-    
-    const dataStr = JSON.stringify(report, null, 2)
-    const dataBlob = new Blob([dataStr], { type: 'application/json' })
-    const url = URL.createObjectURL(dataBlob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `pharmacy-report-${report.reportDate}.json`
-    link.click()
-    URL.revokeObjectURL(url)
-  }
+    if (!report) return;
+
+    const dataStr = JSON.stringify(report, null, 2);
+    const dataBlob = new Blob([dataStr], { type: "application/json" });
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `pharmacy-report-${report.reportDate}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'healthy': return 'bg-success/20 text-success border border-success/30'
-      case 'error': return 'bg-critical/20 text-critical border border-critical/30'
-      case 'warning': return 'bg-warning/20 text-warning border border-warning/30'
-      default: return 'bg-muted text-muted-foreground border'
+      case "healthy":
+        return "bg-success/20 text-success border border-success/30";
+      case "error":
+        return "bg-critical/20 text-critical border border-critical/30";
+      case "warning":
+        return "bg-warning/20 text-warning border border-warning/30";
+      default:
+        return "bg-muted text-muted-foreground border";
     }
-  }
+  };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'healthy': return <CheckCircle className="h-4 w-4" />
-      case 'error': return <AlertTriangle className="h-4 w-4" />
-      default: return <Activity className="h-4 w-4" />
+      case "healthy":
+        return <CheckCircle className="h-4 w-4" />;
+      case "error":
+        return <AlertTriangle className="h-4 w-4" />;
+      default:
+        return <Activity className="h-4 w-4" />;
     }
-  }
+  };
 
   if (loading) {
     return (
       <div className="container mx-auto p-6 space-y-6">
         <div className="flex items-center justify-center py-12">
           <RefreshCw className="h-8 w-8 animate-spin text-blue-500" />
-          <span className="ml-2 text-lg">Generating comprehensive report...</span>
+          <span className="ml-2 text-lg">
+            Generating comprehensive report...
+          </span>
         </div>
       </div>
-    )
+    );
   }
 
   if (error) {
@@ -174,10 +189,10 @@ export default function ReportsPage() {
           </CardContent>
         </Card>
       </div>
-    )
+    );
   }
 
-  if (!report) return null
+  if (!report) return null;
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -221,23 +236,37 @@ export default function ReportsPage() {
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             <div className="text-center p-4 bg-primary/5 rounded-lg border border-primary/10">
-              <div className="text-2xl font-bold text-primary">{report.summary.keyMetrics.mlSuccessRate}%</div>
-              <div className="text-sm text-muted-foreground">ML Success Rate</div>
+              <div className="text-2xl font-bold text-primary">
+                {report.summary.keyMetrics.mlSuccessRate}%
+              </div>
+              <div className="text-sm text-muted-foreground">
+                ML Success Rate
+              </div>
             </div>
             <div className="text-center p-4 bg-success/5 rounded-lg border border-success/10">
-              <div className="text-2xl font-bold text-success">{report.summary.keyMetrics.totalDailyMovements}</div>
-              <div className="text-sm text-muted-foreground">Daily Movements</div>
+              <div className="text-2xl font-bold text-success">
+                {report.summary.keyMetrics.totalDailyMovements}
+              </div>
+              <div className="text-sm text-muted-foreground">
+                Daily Movements
+              </div>
             </div>
             <div className="text-center p-4 bg-critical/5 rounded-lg border border-critical/10">
-              <div className="text-2xl font-bold text-critical">{report.summary.keyMetrics.criticalStockItems}</div>
-              <div className="text-sm text-muted-foreground">Critical Stock Items</div>
+              <div className="text-2xl font-bold text-critical">
+                {report.summary.keyMetrics.criticalStockItems}
+              </div>
+              <div className="text-sm text-muted-foreground">
+                Critical Stock Items
+              </div>
             </div>
             <div className="text-center p-4 bg-muted/5 rounded-lg border">
               <Badge className={getStatusColor(report.summary.systemHealth)}>
                 {getStatusIcon(report.summary.systemHealth)}
                 <span className="ml-1">{report.summary.systemHealth}</span>
               </Badge>
-              <div className="text-sm text-muted-foreground mt-1">System Status</div>
+              <div className="text-sm text-muted-foreground mt-1">
+                System Status
+              </div>
             </div>
           </div>
 
@@ -247,7 +276,10 @@ export default function ReportsPage() {
               <h4 className="font-semibold text-critical mb-2">⚠️ Alerts</h4>
               <div className="space-y-1">
                 {report.summary.alerts.map((alert, index) => (
-                  <div key={index} className="text-sm bg-critical/10 text-critical p-3 rounded-lg border border-critical/20">
+                  <div
+                    key={index}
+                    className="text-sm bg-critical/10 text-critical p-3 rounded-lg border border-critical/20"
+                  >
                     {alert}
                   </div>
                 ))}
@@ -258,10 +290,15 @@ export default function ReportsPage() {
           {/* Recommendations */}
           {report.summary.recommendations.length > 0 && (
             <div>
-              <h4 className="font-semibold text-info mb-2">💡 Recommendations</h4>
+              <h4 className="font-semibold text-info mb-2">
+                💡 Recommendations
+              </h4>
               <div className="space-y-1">
                 {report.summary.recommendations.map((rec, index) => (
-                  <div key={index} className="text-sm bg-info/10 text-info p-3 rounded-lg border border-info/20">
+                  <div
+                    key={index}
+                    className="text-sm bg-info/10 text-info p-3 rounded-lg border border-info/20"
+                  >
                     {rec}
                   </div>
                 ))}
@@ -276,6 +313,9 @@ export default function ReportsPage() {
 
       {/* ML Performance Test Section */}
       <MLPerformanceTestSection className="mb-6" />
+
+      {/* ML Evaluation Section */}
+      <MLEvaluationSection className="mb-6" />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* ML Service Health */}
@@ -296,15 +336,21 @@ export default function ReportsPage() {
             </div>
             <div className="flex items-center justify-between">
               <span>Health Check Response</span>
-              <span className="text-sm">{report.mlServiceHealth.healthCheckResponseTime}ms</span>
+              <span className="text-sm">
+                {report.mlServiceHealth.healthCheckResponseTime}ms
+              </span>
             </div>
             <div className="flex items-center justify-between">
               <span>Prediction Response</span>
-              <span className="text-sm">{report.mlServiceHealth.predictionResponseTime}ms</span>
+              <span className="text-sm">
+                {report.mlServiceHealth.predictionResponseTime}ms
+              </span>
             </div>
             <div className="flex items-center justify-between">
               <span>Active Models</span>
-              <span className="text-sm">{report.mlServiceHealth.predictionCount} drugs</span>
+              <span className="text-sm">
+                {report.mlServiceHealth.predictionCount} drugs
+              </span>
             </div>
             <div className="text-xs text-muted-foreground">
               Service URL: {report.mlServiceHealth.serviceUrl}
@@ -323,31 +369,48 @@ export default function ReportsPage() {
           <CardContent>
             <div className="grid grid-cols-2 gap-4">
               <div className="text-center p-4 bg-critical/10 border border-critical/20 rounded-lg">
-                <div className="text-2xl font-bold text-critical">{report.stockAnalysis.summary.critical}</div>
+                <div className="text-2xl font-bold text-critical">
+                  {report.stockAnalysis.summary.critical}
+                </div>
                 <div className="text-sm text-muted-foreground">Critical</div>
               </div>
               <div className="text-center p-4 bg-warning/10 border border-warning/20 rounded-lg">
-                <div className="text-2xl font-bold text-warning">{report.stockAnalysis.summary.low}</div>
+                <div className="text-2xl font-bold text-warning">
+                  {report.stockAnalysis.summary.low}
+                </div>
                 <div className="text-sm text-muted-foreground">Low Stock</div>
               </div>
               <div className="text-center p-4 bg-info/10 border border-info/20 rounded-lg">
-                <div className="text-2xl font-bold text-info">{report.stockAnalysis.summary.normal}</div>
+                <div className="text-2xl font-bold text-info">
+                  {report.stockAnalysis.summary.normal}
+                </div>
                 <div className="text-sm text-muted-foreground">Normal</div>
               </div>
               <div className="text-center p-4 bg-success/10 border border-success/20 rounded-lg">
-                <div className="text-2xl font-bold text-success">{report.stockAnalysis.summary.good}</div>
-                <div className="text-sm text-muted-foreground">Well Stocked</div>
+                <div className="text-2xl font-bold text-success">
+                  {report.stockAnalysis.summary.good}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  Well Stocked
+                </div>
               </div>
             </div>
-            
+
             {report.stockAnalysis.criticalDrugs.length > 0 && (
               <div className="mt-6">
-                <h4 className="font-semibold text-critical mb-3">Critical Stock Items</h4>
+                <h4 className="font-semibold text-critical mb-3">
+                  Critical Stock Items
+                </h4>
                 <div className="space-y-2 max-h-40 overflow-y-auto">
                   {report.stockAnalysis.criticalDrugs.map((drug, index) => (
-                    <div key={index} className="text-sm flex justify-between bg-critical/5 p-3 rounded-lg border border-critical/10">
+                    <div
+                      key={index}
+                      className="text-sm flex justify-between bg-critical/5 p-3 rounded-lg border border-critical/10"
+                    >
                       <span className="font-medium">{drug.drugName}</span>
-                      <span className="text-critical font-semibold">{drug.currentStock} {drug.unit}</span>
+                      <span className="text-critical font-semibold">
+                        {drug.currentStock} {drug.unit}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -367,22 +430,32 @@ export default function ReportsPage() {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="text-center p-4 bg-success/10 border border-success/20 rounded-lg">
-                <div className="text-xl font-bold text-success">{report.dailyMovements.summary.totalReceived}</div>
-                <div className="text-sm text-muted-foreground">Units Received</div>
+                <div className="text-xl font-bold text-success">
+                  {report.dailyMovements.summary.totalReceived}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  Units Received
+                </div>
               </div>
               <div className="text-center p-4 bg-info/10 border border-info/20 rounded-lg">
-                <div className="text-xl font-bold text-info">{report.dailyMovements.summary.totalUsed}</div>
+                <div className="text-xl font-bold text-info">
+                  {report.dailyMovements.summary.totalUsed}
+                </div>
                 <div className="text-sm text-muted-foreground">Units Used</div>
               </div>
             </div>
-            
+
             <div className="flex justify-between text-sm">
               <span>Drugs with Activity</span>
-              <span>{report.dailyMovements.summary.totalDrugsWithMovements}</span>
+              <span>
+                {report.dailyMovements.summary.totalDrugsWithMovements}
+              </span>
             </div>
             <div className="flex justify-between text-sm">
               <span>Average Daily Usage</span>
-              <span>{report.dailyMovements.summary.averageUsage.toFixed(1)} units</span>
+              <span>
+                {report.dailyMovements.summary.averageUsage.toFixed(1)} units
+              </span>
             </div>
             <div className="flex justify-between text-sm">
               <span>High Usage Drugs</span>
@@ -401,29 +474,39 @@ export default function ReportsPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="text-center p-6 bg-primary/10 border border-primary/20 rounded-lg">
-              <div className="text-3xl font-bold text-primary">{Math.round(report.mlPerformance.mlSuccessRate)}%</div>
-              <div className="text-sm text-muted-foreground">ML Success Rate</div>
+              <div className="text-3xl font-bold text-primary">
+                {Math.round(report.mlPerformance.mlSuccessRate)}%
+              </div>
+              <div className="text-sm text-muted-foreground">
+                ML Success Rate
+              </div>
             </div>
-            
+
             <div className="space-y-3">
               <div className="flex justify-between text-sm p-2 rounded bg-muted/50">
                 <span>Total Calculations</span>
-                <span className="font-semibold">{report.mlPerformance.totalCalculations}</span>
+                <span className="font-semibold">
+                  {report.mlPerformance.totalCalculations}
+                </span>
               </div>
               <div className="flex justify-between text-sm p-2 rounded bg-success/5">
                 <span>ML Predictions</span>
-                <span className="text-success font-semibold">{report.mlPerformance.mlCalculations}</span>
+                <span className="text-success font-semibold">
+                  {report.mlPerformance.mlCalculations}
+                </span>
               </div>
               <div className="flex justify-between text-sm p-2 rounded bg-warning/5">
                 <span>Statistical Fallbacks</span>
-                <span className="text-warning font-semibold">{report.mlPerformance.fallbackCalculations}</span>
+                <span className="text-warning font-semibold">
+                  {report.mlPerformance.fallbackCalculations}
+                </span>
               </div>
             </div>
-            
+
             <div className="w-full bg-muted rounded-full h-3">
-              <div 
-                className="bg-primary h-3 rounded-full transition-all duration-300" 
-                style={{width: `${report.mlPerformance.mlSuccessRate}%`}}
+              <div
+                className="bg-primary h-3 rounded-full transition-all duration-300"
+                style={{ width: `${report.mlPerformance.mlSuccessRate}%` }}
               ></div>
             </div>
           </CardContent>
@@ -456,16 +539,27 @@ export default function ReportsPage() {
                 </thead>
                 <tbody>
                   {report.dailyMovements.movements.map((movement, index) => (
-                    <tr key={index} className="border-b border-border hover:bg-muted/50 transition-colors">
+                    <tr
+                      key={index}
+                      className="border-b border-border hover:bg-muted/50 transition-colors"
+                    >
                       <td className="p-3 font-medium">{movement.drugName}</td>
                       <td className="p-3 text-right text-success font-semibold">
-                        {movement.quantityReceived > 0 ? `+${movement.quantityReceived}` : '-'}
+                        {movement.quantityReceived > 0
+                          ? `+${movement.quantityReceived}`
+                          : "-"}
                       </td>
                       <td className="p-3 text-right text-critical font-semibold">
-                        {movement.quantityUsed > 0 ? `-${movement.quantityUsed}` : '-'}
+                        {movement.quantityUsed > 0
+                          ? `-${movement.quantityUsed}`
+                          : "-"}
                       </td>
-                      <td className="p-3 text-right font-bold">{movement.closingStock}</td>
-                      <td className="p-3 text-muted-foreground">{movement.unit}</td>
+                      <td className="p-3 text-right font-bold">
+                        {movement.closingStock}
+                      </td>
+                      <td className="p-3 text-muted-foreground">
+                        {movement.unit}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -480,10 +574,12 @@ export default function ReportsPage() {
         <CardContent className="p-4">
           <div className="flex items-center justify-between text-sm text-muted-foreground">
             <span>Report Date: {report.reportDate}</span>
-            <span>Generated: {new Date(report.timestamp).toLocaleString()}</span>
+            <span>
+              Generated: {new Date(report.timestamp).toLocaleString()}
+            </span>
           </div>
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

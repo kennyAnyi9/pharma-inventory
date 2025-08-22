@@ -247,10 +247,10 @@ export async function GET() {
     // ==================== OVERALL RESULTS ====================
     if (testResult.accuracyTest.status === 'pass' && testResult.speedTest.status === 'pass') {
       testResult.overallStatus = 'pass'
-      testResult.summary = '✅ All performance tests passed - system meets Chapter 3 objectives'
+      testResult.summary = '✅ All performance tests passed - system performing optimally'
     } else if (testResult.accuracyTest.status === 'fail' || testResult.speedTest.status === 'fail') {
       testResult.overallStatus = 'fail'
-      testResult.summary = '❌ Performance tests failed - system does not meet Chapter 3 objectives'
+      testResult.summary = '❌ Performance tests failed - system requires attention'
     } else {
       testResult.overallStatus = 'warning'
       testResult.summary = '⚠️ Performance tests completed with warnings - review results'

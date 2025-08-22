@@ -158,7 +158,7 @@ export async function logMLCalculation(drugId: number, drugName: string, calcula
     drugId,
     drugName,
     activityType: 'ml_calculation',
-    description: `ML calculated optimal reorder level: ${calculatedLevel} (confidence: ${confidence.toFixed(1)}%)`,
+    description: `ML calculated optimal reorder level: ${calculatedLevel}`,
     newReorderLevel: calculatedLevel,
     source: 'ml_system',
     mlConfidence: confidence,

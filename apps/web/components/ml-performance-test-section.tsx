@@ -1,122 +1,131 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@workspace/ui/components/card'
-import { Button } from '@workspace/ui/components/button'
-import { Badge } from '@workspace/ui/components/badge'
-import { Progress } from '@workspace/ui/components/progress'
-import { 
-  TestTube, 
-  Timer, 
-  Target, 
-  Play, 
-  CheckCircle, 
-  XCircle, 
+import { Badge } from "@workspace/ui/components/badge";
+import { Button } from "@workspace/ui/components/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@workspace/ui/components/card";
+import { Progress } from "@workspace/ui/components/progress";
+import { cn } from "@workspace/ui/lib/utils";
+import {
   AlertTriangle,
-  RefreshCw,
+  CheckCircle,
   Clock,
-  TrendingUp
-} from 'lucide-react'
-import { cn } from '@workspace/ui/lib/utils'
+  Play,
+  RefreshCw,
+  Target,
+  TestTube,
+  Timer,
+  TrendingUp,
+  XCircle,
+} from "lucide-react";
+import { useState } from "react";
 
 interface PerformanceTestResult {
-  timestamp: string
+  timestamp: string;
   accuracyTest: {
-    status: 'pass' | 'fail' | 'warning'
-    averageError: number
-    target: number
-    message: string
+    status: "pass" | "fail" | "warning";
+    averageError: number;
+    target: number;
+    message: string;
     details: {
-      totalDrugs: number
-      drugsWithPredictions: number
-      drugsWithActualData: number
-      testPeriodDays: number
+      totalDrugs: number;
+      drugsWithPredictions: number;
+      drugsWithActualData: number;
+      testPeriodDays: number;
       predictions: Array<{
-        drugId: number
-        drugName: string
-        predicted: number
-        actual: number
-        errorPercentage: number
-      }>
-    }
-  }
+        drugId: number;
+        drugName: string;
+        predicted: number;
+        actual: number;
+        errorPercentage: number;
+      }>;
+    };
+  };
   speedTest: {
-    status: 'pass' | 'fail' | 'warning'
-    averageResponseTime: number
-    target: number
-    message: string
+    status: "pass" | "fail" | "warning";
+    averageResponseTime: number;
+    target: number;
+    message: string;
     details: {
-      mlHealthTime: number
-      forecastTime: number
-      reorderCalculationTime: number
-      totalRequests: number
-    }
-  }
-  overallStatus: 'pass' | 'fail' | 'warning'
-  summary: string
+      mlHealthTime: number;
+      forecastTime: number;
+      reorderCalculationTime: number;
+      totalRequests: number;
+    };
+  };
+  overallStatus: "pass" | "fail" | "warning";
+  summary: string;
 }
 
 interface MLPerformanceTestSectionProps {
-  className?: string
+  className?: string;
 }
 
-export function MLPerformanceTestSection({ className }: MLPerformanceTestSectionProps) {
-  const [testResult, setTestResult] = useState<PerformanceTestResult | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+export function MLPerformanceTestSection({
+  className,
+}: MLPerformanceTestSectionProps) {
+  const [testResult, setTestResult] = useState<PerformanceTestResult | null>(
+    null
+  );
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const runPerformanceTest = async () => {
-    setIsLoading(true)
-    setError(null)
-    
+    setIsLoading(true);
+    setError(null);
+
     try {
-      const response = await fetch('/api/ml/performance-test')
-      
+      const response = await fetch("/api/ml/performance-test");
+
       if (!response.ok) {
-        throw new Error(`Test failed: ${response.status}`)
+        throw new Error(`Test failed: ${response.status}`);
       }
-      
-      const result = await response.json()
-      setTestResult(result)
+
+      const result = await response.json();
+      setTestResult(result);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error occurred')
+      setError(err instanceof Error ? err.message : "Unknown error occurred");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
-  const getStatusIcon = (status: 'pass' | 'fail' | 'warning') => {
+  const getStatusIcon = (status: "pass" | "fail" | "warning") => {
     switch (status) {
-      case 'pass':
-        return <CheckCircle className="h-4 w-4 text-green-600" />
-      case 'fail':
-        return <XCircle className="h-4 w-4 text-red-600" />
-      case 'warning':
-        return <AlertTriangle className="h-4 w-4 text-yellow-600" />
+      case "pass":
+        return <CheckCircle className="h-4 w-4 text-green-600" />;
+      case "fail":
+        return <XCircle className="h-4 w-4 text-red-600" />;
+      case "warning":
+        return <AlertTriangle className="h-4 w-4 text-yellow-600" />;
     }
-  }
+  };
 
-  const getStatusColor = (status: 'pass' | 'fail' | 'warning') => {
+  const getStatusColor = (status: "pass" | "fail" | "warning") => {
     switch (status) {
-      case 'pass':
-        return 'bg-green-100 text-green-800 border-green-200'
-      case 'fail':
-        return 'bg-red-100 text-red-800 border-red-200'
-      case 'warning':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200'
+      case "pass":
+        return "bg-green-100 text-green-800 border-green-200";
+      case "fail":
+        return "bg-red-100 text-red-800 border-red-200";
+      case "warning":
+        return "bg-yellow-100 text-yellow-800 border-yellow-200";
     }
-  }
+  };
 
   return (
-    <Card className={cn('', className)}>
+    <Card className={cn("", className)}>
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <TestTube className="h-5 w-5" />
-            ML Performance Test (Chapter 3 Metrics)
+            ML Performance Test
           </div>
-          <Button 
-            onClick={runPerformanceTest} 
+          <Button
+            onClick={runPerformanceTest}
             disabled={isLoading}
             size="sm"
             variant="outline"
@@ -126,11 +135,11 @@ export function MLPerformanceTestSection({ className }: MLPerformanceTestSection
             ) : (
               <Play className="h-4 w-4 mr-2" />
             )}
-            {isLoading ? 'Testing...' : 'Run Test'}
+            {isLoading ? "Testing..." : "Run Test"}
           </Button>
         </CardTitle>
       </CardHeader>
-      
+
       <CardContent className="space-y-6">
         {error && (
           <Card className="border-red-200 bg-red-50">
@@ -156,19 +165,27 @@ export function MLPerformanceTestSection({ className }: MLPerformanceTestSection
         {testResult && (
           <>
             {/* Overall Status */}
-            <Card className={cn(
-              'border',
-              testResult.overallStatus === 'pass' ? 'border-green-200 bg-green-50' :
-              testResult.overallStatus === 'fail' ? 'border-red-200 bg-red-50' :
-              'border-yellow-200 bg-yellow-50'
-            )}>
+            <Card
+              className={cn(
+                "border",
+                testResult.overallStatus === "pass"
+                  ? "border-green-200 bg-green-50"
+                  : testResult.overallStatus === "fail"
+                    ? "border-red-200 bg-red-50"
+                    : "border-yellow-200 bg-yellow-50"
+              )}
+            >
               <CardContent className="pt-4">
-                <div className={cn(
-                  'flex items-center gap-2 font-medium',
-                  testResult.overallStatus === 'pass' ? 'text-green-800' :
-                  testResult.overallStatus === 'fail' ? 'text-red-800' :
-                  'text-yellow-800'
-                )}>
+                <div
+                  className={cn(
+                    "flex items-center gap-2 font-medium",
+                    testResult.overallStatus === "pass"
+                      ? "text-green-800"
+                      : testResult.overallStatus === "fail"
+                        ? "text-red-800"
+                        : "text-yellow-800"
+                  )}
+                >
                   {getStatusIcon(testResult.overallStatus)}
                   {testResult.summary}
                 </div>
@@ -187,19 +204,23 @@ export function MLPerformanceTestSection({ className }: MLPerformanceTestSection
                 <CardContent className="space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-sm">Status</span>
-                    <Badge className={getStatusColor(testResult.speedTest.status)}>
+                    <Badge
+                      className={getStatusColor(testResult.speedTest.status)}
+                    >
                       {getStatusIcon(testResult.speedTest.status)}
-                      <span className="ml-1 capitalize">{testResult.speedTest.status}</span>
+                      <span className="ml-1 capitalize">
+                        {testResult.speedTest.status}
+                      </span>
                     </Badge>
                   </div>
-                  
+
                   <div className="flex items-center justify-between">
                     <span className="text-sm">Average Response Time</span>
                     <span className="text-sm font-mono">
                       {testResult.speedTest.averageResponseTime.toFixed(0)}ms
                     </span>
                   </div>
-                  
+
                   <div className="flex items-center justify-between">
                     <span className="text-sm">Target</span>
                     <span className="text-sm font-mono text-muted-foreground">
@@ -214,7 +235,9 @@ export function MLPerformanceTestSection({ className }: MLPerformanceTestSection
                     </div>
                     <div className="flex justify-between text-xs">
                       <span>Reorder Calc</span>
-                      <span>{testResult.speedTest.details.reorderCalculationTime}ms</span>
+                      <span>
+                        {testResult.speedTest.details.reorderCalculationTime}ms
+                      </span>
                     </div>
                   </div>
 
@@ -235,19 +258,23 @@ export function MLPerformanceTestSection({ className }: MLPerformanceTestSection
                 <CardContent className="space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-sm">Status</span>
-                    <Badge className={getStatusColor(testResult.accuracyTest.status)}>
+                    <Badge
+                      className={getStatusColor(testResult.accuracyTest.status)}
+                    >
                       {getStatusIcon(testResult.accuracyTest.status)}
-                      <span className="ml-1 capitalize">{testResult.accuracyTest.status}</span>
+                      <span className="ml-1 capitalize">
+                        {testResult.accuracyTest.status}
+                      </span>
                     </Badge>
                   </div>
-                  
+
                   <div className="flex items-center justify-between">
                     <span className="text-sm">Average Error</span>
                     <span className="text-sm font-mono">
                       {testResult.accuracyTest.averageError.toFixed(1)}%
                     </span>
                   </div>
-                  
+
                   <div className="flex items-center justify-between">
                     <span className="text-sm">Target</span>
                     <span className="text-sm font-mono text-muted-foreground">
@@ -258,11 +285,15 @@ export function MLPerformanceTestSection({ className }: MLPerformanceTestSection
                   <div className="pt-2 space-y-2">
                     <div className="flex justify-between text-xs">
                       <span>Drugs Tested</span>
-                      <span>{testResult.accuracyTest.details.drugsWithActualData}</span>
+                      <span>
+                        {testResult.accuracyTest.details.drugsWithActualData}
+                      </span>
                     </div>
                     <div className="flex justify-between text-xs">
                       <span>Test Period</span>
-                      <span>{testResult.accuracyTest.details.testPeriodDays} days</span>
+                      <span>
+                        {testResult.accuracyTest.details.testPeriodDays} days
+                      </span>
                     </div>
                   </div>
 
@@ -279,7 +310,7 @@ export function MLPerformanceTestSection({ className }: MLPerformanceTestSection
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm flex items-center gap-2">
                     <TrendingUp className="h-4 w-4" />
-                    Top Accuracy Results (Best 5)
+                    Top Accuracy Results
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -288,20 +319,29 @@ export function MLPerformanceTestSection({ className }: MLPerformanceTestSection
                       .sort((a, b) => a.errorPercentage - b.errorPercentage)
                       .slice(0, 5)
                       .map((prediction, index) => (
-                        <div key={`${prediction.drugId}-${index}`} className="flex items-center justify-between text-sm border-b pb-2">
-                          <span className="flex-1 truncate">{prediction.drugName}</span>
-                          <span className="font-mono text-xs px-2">
-                            {prediction.predicted.toFixed(0)} vs {prediction.actual.toFixed(0)}
+                        <div
+                          key={`${prediction.drugId}-${index}`}
+                          className="flex items-center justify-between text-sm border-b pb-2"
+                        >
+                          <span className="flex-1 truncate">
+                            {prediction.drugName}
                           </span>
-                          <Badge 
-                            variant={prediction.errorPercentage <= 15 ? "default" : "destructive"}
+                          <span className="font-mono text-xs px-2">
+                            {prediction.predicted.toFixed(0)} vs{" "}
+                            {prediction.actual.toFixed(0)}
+                          </span>
+                          <Badge
+                            variant={
+                              prediction.errorPercentage <= 15
+                                ? "default"
+                                : "destructive"
+                            }
                             className="text-xs"
                           >
                             {prediction.errorPercentage.toFixed(1)}%
                           </Badge>
                         </div>
-                      ))
-                    }
+                      ))}
                   </div>
                 </CardContent>
               </Card>
@@ -320,10 +360,9 @@ export function MLPerformanceTestSection({ className }: MLPerformanceTestSection
         {!testResult && !isLoading && (
           <div className="text-center py-8 text-muted-foreground">
             <TestTube className="h-8 w-8 mx-auto mb-2 opacity-50" />
-            <p className="text-sm">Run performance test to check ML system compliance with Chapter 3 objectives</p>
           </div>
         )}
       </CardContent>
     </Card>
-  )
+  );
 }
